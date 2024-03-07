@@ -27,24 +27,21 @@ test_gojq:
 	./tests/test_gojq.sh
 
 run_container: build_cache
-	docker run -d --rm --name ${container_name} --net host \
+	docker run --rm --name ${container_name} --net host \
 		-v `pwd`/monitors/:/app/monitors/:z \
 		-v `pwd`/persistent_data/:/app/persistent_data/:z \
-		--env SOURCE_PULSAR=pulsar://localhost:6650 \
-		--env DEST_PULSAR=pulsar://localhost:6650 \
 		--env LOG_LEVEL=debug \
-		-p 7700:7700 \
 		${image_name}:${image_version}
-	docker logs -f ${container_name}
+#docker logs -f ${container_name}
 
 # workaround for dockerfile context
-begin_build:
-	mkdir -p build/gojq_extention/
-	cp -r ../p2p_parser/go.* build/gojq_extention/
-	cp -r ../gojq_extention/src build/gojq_extention/src
+begin_build: end_build
+	mkdir -p build/gojq_extentions/
+	cp -r ../gojq_extentions/go.* build/gojq_extentions/
+	cp -r ../gojq_extentions/src build/gojq_extentions/src
 
 end_build:
-	rm -r build/
+	rm -rf build/
 
 build: begin_build
 	echo "Building ${image_name}:${image_version} --no-cache"

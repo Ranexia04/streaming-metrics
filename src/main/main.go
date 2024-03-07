@@ -1,10 +1,11 @@
 package main
 
 import (
+	"strings"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/apache/pulsar-client-go/pulsar/log"
+	pulsar_log "github.com/apache/pulsar-client-go/pulsar/log"
 	"github.com/sirupsen/logrus"
 
 	"example.com/streaming_monitors/src/flow"
@@ -12,8 +13,8 @@ import (
 )
 
 func logging(level string) {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
+	logrus.SetFormatter(&logrus.JSONFormatter{
+		//FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.000Z07:00",
 	})
 	l, err := logrus.ParseLevel(level)
@@ -33,12 +34,17 @@ func new_client(url string, trust_cert_file string, cert_file string, key_file s
 		auth = pulsar.NewAuthenticationTLS(cert_file, key_file)
 	}
 
+	log := logrus.New()
+	log.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: "2006-01-02T15:04:05.000Z07:00",
+	})
+
 	client, err = pulsar.NewClient(pulsar.ClientOptions{
 		URL:                        url,
 		TLSAllowInsecureConnection: allow_insecure_connection,
 		Authentication:             auth,
 		TLSTrustCertsFilePath:      trust_cert_file,
-		Logger:                     log.NewLoggerWithLogrus(logrus.New()),
+		Logger:                     pulsar_log.NewLoggerWithLogrus(log),
 	})
 
 	if err != nil {
@@ -67,7 +73,7 @@ func main() {
 	ack_chan := make(chan pulsar.ConsumerMessage, 2000)
 
 	consumer, err := source_client.Subscribe(pulsar.ConsumerOptions{
-		Topic:                       opt.sourcetopic,
+		Topics:                      strings.Split(opt.sourcetopic, ";"),
 		SubscriptionName:            opt.sourcesubscription,
 		Name:                        opt.sourcename,
 		Type:                        pulsar.Exclusive,

@@ -13,7 +13,8 @@ def create_monitors(n_monitors: int):
         create_monitor(f"TEST_{i_monitor:010d}")
 
 def create_monitor(name: str):
-    os.mkdir(f"monitors/{name}")
+    os.makedirs(f"monitors/configs", exist_ok=True)
+    os.makedirs(f"monitors/{name}", exist_ok=True)
     with open(f"monitors/configs/{name}.yaml", mode='w') as cyaml:
         cyaml.write(config(name))
     with open(f"monitors/{name}/filter.jq", mode='w') as fjq:

@@ -62,7 +62,7 @@ def logic(producer: pulsar.Producer) -> None:
         producer.send_async(content=msg, partition_key="key=%d" % (i,), callback=callback)
         c+=1
 
-        #time.sleep(random.random()/10)
+        time.sleep(random.random()/10)
 
         # if time.time().
 

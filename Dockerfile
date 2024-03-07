@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS BuilStage
+FROM golang:1.22-alpine AS BuilStage
 
 ENV CGO_ENABLED 0
 
@@ -7,18 +7,18 @@ WORKDIR /app
 COPY go.mod ./
 COPY go.sum ./
 
-COPY build/gojq_extention/ ./../gojq_extention/
+COPY build/gojq_extentions/ ./../gojq_extentions/
 
 RUN go mod download
 
 COPY src/ ./src/
 
-RUN go build -C src/main -o /app/streaming_monitorsssss
+RUN go build -C src/main -o /app/streaming_monitors
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=BuilStage /app/streaming_monitor ./streaming_monitors
+COPY --from=BuilStage /app/streaming_monitors ./streaming_monitors
 
-ENTRYPOINT [ "./streaming_monitor" ]
+ENTRYPOINT [ "./streaming_monitors" ]

@@ -1,6 +1,6 @@
 module example.com/streaming_monitors
 
-go 1.20
+go 1.22
 
 require (
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -39,6 +39,7 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/xboshy/linkedhashmap v0.1.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/mod v0.11.0 // indirect
@@ -52,6 +53,7 @@ require (
 )
 
 require (
+	example.com/gojq_extentions v0.0.0-00010101000000-000000000000
 	github.com/apache/pulsar-client-go v0.11.1
 	github.com/cockroachdb/pebble v0.0.0-20231011191824-ede31f1a8e4b
 	github.com/itchyny/gojq v0.12.13
@@ -59,7 +61,6 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v3 v3.0.1
-	example.com/gojq_extentions v0.0.0-00010101000000-000000000000
 )
 
 replace example.com/gojq_extentions => ../gojq_extentions
