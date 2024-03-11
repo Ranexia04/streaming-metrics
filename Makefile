@@ -1,6 +1,6 @@
 container_name=streaming_monitors
 image_name=streaming_monitors
-image_version=0.0.9
+image_version=0.1.0
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true
@@ -54,8 +54,7 @@ build_cache: begin_build
 	make end_build
 
 docker_hub: build
-	docker tag ${image_name}:${image_version} xcjsbsx/${image_name}:${image_version}
-	docker push xcjsbsx/${image_name}:${image_version}
+	./push_dockerhub.sh ${image_name} ${image_version}
 
 start_pulsar:
 	docker run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:latest bin/pulsar standalone
