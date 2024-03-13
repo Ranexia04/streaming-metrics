@@ -43,7 +43,7 @@ def filter_str(name: str) -> str:
 .start_time as $time |
 1 as $m |
 
-select(.domain == "XPTO") // filter_error($namespace) |
+select(.domain == "XPTO" and ( .code | ctest("ERR") )) // filter_error($namespace) |
 log($namespace; .code; .start_time; {{"count": 1, "dummy": "12345678901234567890123456789012345678901234567890"}} | map_values(.) )
 '''
 

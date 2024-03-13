@@ -1,6 +1,6 @@
 container_name=streaming_monitors
 image_name=streaming_monitors
-image_version=0.1.0
+image_version=0.1.1
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true
