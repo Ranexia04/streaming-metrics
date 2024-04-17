@@ -11,9 +11,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func with_function_filter_error() gojq.CompilerOption {
+func with_function_namespace_filter_error() gojq.CompilerOption {
 	return gojq.WithFunction("filter_error", 1, 1, func(in any, args []any) any {
 		return fmt.Errorf("filter_error: not relevant msg for namespace: %s", args[0])
+	})
+}
+
+func with_function_group_filter_error() gojq.CompilerOption {
+	return gojq.WithFunction("filter_error", 1, 1, func(in any, args []any) any {
+		return fmt.Errorf("filter_error: not relevant msg for group: %s", args[0])
 	})
 }
 
@@ -94,14 +100,37 @@ func load_namespaces(monitors_dir string, configs []flow.Namespace) map[string]*
 	return namespaces
 }
 
-func load_filters(monitors_dir string, configs []flow.Namespace) []*gojq.Code {
-	filters := make([]*gojq.Code, 0, len(configs))
+func load_filters(monitors_dir string, configs []flow.Namespace) *flow.Filter_root {
+	filters := load_group_filters(monitors_dir, configs)
 	for i := 0; i < len(configs); i++ {
 		namespace := &configs[i]
+		group := filters.Get_group(namespace.Group)
+		if group == nil {
+			logrus.Errorf("load_filters: Failed to load namespace %s because group %s does not exist", namespace.Namespace, namespace.Group)
+			continue
+		}
 		path_filter_jq := fmt.Sprintf("%s/%s/%s", monitors_dir, namespace.Namespace, "filter.jq")
-		if filter := load_jq(path_filter_jq, with_function_filter_error(), with_function_log(), with_function_compile_test()); filter != nil {
-			filters = append(filters, filter)
+		if filter := load_jq(path_filter_jq, with_function_namespace_filter_error(), with_function_log(), with_function_compile_test()); filter != nil {
+			group.Add_child(&flow.Leaf_node{
+				Filter: filter,
+			})
 		}
 	}
 	return filters
+}
+
+func load_group_filters(monitors_dir string, configs []flow.Namespace) *flow.Filter_root {
+	root := flow.New_filter_tree()
+	for i := 0; i < len(configs); i++ {
+		namespace := &configs[i]
+		if root.Has_group(namespace.Group) {
+			continue
+		}
+		path_group_filter_jq := fmt.Sprintf("%s/%s/%s", monitors_dir, "groups", namespace.Group+".jq")
+		if group_filter := load_jq(path_group_filter_jq, with_function_group_filter_error(), with_function_compile_test()); group_filter != nil {
+			group := flow.New_group_node(namespace.Group, group_filter)
+			root.Add_group(namespace.Group, group)
+		}
+	}
+	return root
 }

@@ -10,13 +10,16 @@ def make_clean():
 
 def create_monitors(n_monitors: int):
     for i_monitor in range(n_monitors):
-        create_monitor(f"TEST_{i_monitor:010d}")
+        create_monitor(f"TEST_{i_monitor:010d}", "XPTO")
 
-def create_monitor(name: str):
+def create_monitor(name: str, group: str):
     os.makedirs(f"monitors/configs", exist_ok=True)
+    os.makedirs(f"monitors/groups", exist_ok=True)
     os.makedirs(f"monitors/{name}", exist_ok=True)
     with open(f"monitors/configs/{name}.yaml", mode='w') as cyaml:
-        cyaml.write(config(name))
+        cyaml.write(config(name, group))
+    with open(f"monitors/groups/{group}.yaml", mode='w') as cyaml:
+        cyaml.write(group_str(group))
     with open(f"monitors/{name}/filter.jq", mode='w') as fjq:
         fjq.write(filter_str(name))
     with open(f"monitors/{name}/lambda.jq", mode='w') as ljq:
@@ -24,8 +27,9 @@ def create_monitor(name: str):
     with open(f"monitors/{name}/monitor.jq", mode='w') as ajq:
         ajq.write(monitor_str(name))
 
-def config(name: str) -> str:
+def config(name: str, group: str) -> str:
     return f'''
+group: {group}
 namespace: {name}
 granularity: 60
 cardinality: 15
@@ -34,6 +38,11 @@ current: true
 store_type: cached_pebble_store
 '''
 
+def group_str(group: str) -> str:
+    return f'''
+"{group}" as $group |
+select(.domain == "XPTO" ) // filter_error($group)
+'''
 
 # store_type: cached_pebble_store
 

@@ -20,6 +20,7 @@ type Metric struct {
 }
 
 type Namespace struct {
+	Group       string `json:"group" yaml:"group"`
 	Namespace   string `json:"namespace" yaml:"namespace"`
 	Granularity int64  `json:"granularity" yaml:"granularity"`
 	Cardinality int64  `json:"cardinality" yaml:"cardinality"`

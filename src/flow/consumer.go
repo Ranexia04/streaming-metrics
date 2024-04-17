@@ -7,11 +7,10 @@ import (
 	"example.com/streaming_monitors/src/prom_metrics"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/itchyny/gojq"
 	"github.com/sirupsen/logrus"
 )
 
-func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filters []*gojq.Code, tick <-chan time.Time) {
+func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filters *Filter_root, tick <-chan time.Time) {
 	var n_read float64 = 0
 
 	last_instant := time.Now()
@@ -63,7 +62,7 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 	}
 }
 
-func filter(msg []byte, filters []*gojq.Code) []Metric {
+func filter(msg []byte, filters *Filter_root) []Metric {
 	filtered := make([]Metric, 0)
 
 	var msg_json any
@@ -75,9 +74,8 @@ func filter(msg []byte, filters []*gojq.Code) []Metric {
 
 	// filter_start := time.Now()
 
-	for _, filter := range filters {
-		// TODO This is not an immutable struct (needs to create a copy?? or just risk it?)
-		iter := filter.Run(msg_json)
+	for _, group := range filters.groups {
+		iter := group.group_filter.Run(msg_json)
 
 		v, ok := iter.Next()
 		if !ok {
@@ -85,16 +83,31 @@ func filter(msg []byte, filters []*gojq.Code) []Metric {
 		}
 		if _, ok := v.(error); ok {
 			// ignore -- msg is not important for this namespace
-			logrus.Tracef("filter next err: %+v", v.(error))
+			logrus.Tracef("filter group_filter next err: %+v", v.(error))
 			continue
-		} else {
-			metric := metric_from_any(v)
+		}
+		// Ok
+		for _, filter := range group.children {
+			iter := filter.Filter.Run(msg_json)
 
-			if metric != nil {
-				filtered = append(filtered, *metric)
+			v, ok := iter.Next()
+			if !ok {
+				continue
+			}
+			if _, ok := v.(error); ok {
+				// ignore -- msg is not important for this namespace
+				logrus.Tracef("filter next err: %+v", v.(error))
+				continue
+			} else {
+				metric := metric_from_any(v)
+
+				if metric != nil {
+					filtered = append(filtered, *metric)
+				}
 			}
 		}
-
+		// One was suscessful!
+		break
 	}
 
 	// go prom_metrics.Filter_time.Observe(float64(time.Since(filter_start) / time.Microsecond))
