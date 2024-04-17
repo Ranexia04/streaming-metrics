@@ -7,19 +7,21 @@ import sys
 def make_clean():
     os.system("rm monitors/configs/TEST_*")
     os.system("rm -r monitors/TEST_*")
+    os.system("rm -r monitors/groups/*")
 
 def create_monitors(n_monitors: int):
     for i_monitor in range(n_monitors):
         create_monitor(f"TEST_{i_monitor:010d}", "XPTO")
 
+    os.makedirs(f"monitors/groups", exist_ok=True)
+    with open(f"monitors/groups/groups.jq", mode='w') as cyaml:
+        cyaml.write(group_str())
+
 def create_monitor(name: str, group: str):
     os.makedirs(f"monitors/configs", exist_ok=True)
-    os.makedirs(f"monitors/groups", exist_ok=True)
     os.makedirs(f"monitors/{name}", exist_ok=True)
     with open(f"monitors/configs/{name}.yaml", mode='w') as cyaml:
         cyaml.write(config(name, group))
-    with open(f"monitors/groups/{group}.yaml", mode='w') as cyaml:
-        cyaml.write(group_str(group))
     with open(f"monitors/{name}/filter.jq", mode='w') as fjq:
         fjq.write(filter_str(name))
     with open(f"monitors/{name}/lambda.jq", mode='w') as ljq:
@@ -38,10 +40,13 @@ current: true
 store_type: cached_pebble_store
 '''
 
-def group_str(group: str) -> str:
+def group_str() -> str:
     return f'''
-"{group}" as $group |
-select(.domain == "XPTO" ) // filter_error($group)
+if .domain == "XPTO" then
+    "XPTO"
+else
+    filter_error("ola")
+end
 '''
 
 # store_type: cached_pebble_store

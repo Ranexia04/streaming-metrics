@@ -7,12 +7,14 @@ import "github.com/itchyny/gojq"
  */
 
 type Filter_root struct {
-	groups map[string]*Group_node
+	group_filter *gojq.Code
+	groups       map[string]*Group_node
 }
 
-func New_filter_tree() *Filter_root {
+func New_filter_tree(group_filter *gojq.Code) *Filter_root {
 	return &Filter_root{
-		groups: make(map[string]*Group_node),
+		group_filter: group_filter,
+		groups:       make(map[string]*Group_node),
 	}
 }
 
@@ -29,25 +31,21 @@ func (r *Filter_root) Get_group(group string) *Group_node {
 	return r.groups[group]
 }
 
-func (r *Filter_root) Get_all_groupa() *Group_node {
-	return nil
-}
-
 /*
  * Group_node
  */
 
 type Group_node struct {
-	name         string
-	group_filter *gojq.Code
-	children     []*Leaf_node
+	name string
+	//group_filter *gojq.Code
+	children []*Leaf_node
 }
 
-func New_group_node(name string, group_filter *gojq.Code) *Group_node {
+func New_group_node(name string /*, group_filter *gojq.Code*/) *Group_node {
 	return &Group_node{
-		name:         name,
-		group_filter: group_filter,
-		children:     make([]*Leaf_node, 0),
+		name: name,
+		//group_filter: group_filter,
+		children: make([]*Leaf_node, 0),
 	}
 }
 

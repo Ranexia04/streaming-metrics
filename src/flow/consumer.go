@@ -74,8 +74,37 @@ func filter(msg []byte, filters *Filter_root) []Metric {
 
 	// filter_start := time.Now()
 
-	for _, group := range filters.groups {
-		iter := group.group_filter.Run(msg_json)
+	iter := filters.group_filter.Run(msg_json)
+
+	v, ok := iter.Next()
+	if !ok {
+		return filtered
+	}
+	if _, ok := v.(error); ok {
+		// ignore -- msg is not important for this namespace
+		logrus.Tracef("filter group_filter next err: %+v", v.(error))
+		return filtered
+	}
+
+	var group_name string
+
+	switch gn := v.(type) {
+	case string:
+		group_name = gn
+
+	default:
+		logrus.Errorf("filter_root did not return string: %+v", v)
+		return filtered
+	}
+
+	group_filters, ok := filters.groups[group_name]
+	if !ok {
+		logrus.Errorf("filter_root group does not exist: %s", group_name)
+		return filtered
+	}
+
+	for _, filter := range group_filters.children {
+		iter := filter.Filter.Run(msg_json)
 
 		v, ok := iter.Next()
 		if !ok {
@@ -83,31 +112,15 @@ func filter(msg []byte, filters *Filter_root) []Metric {
 		}
 		if _, ok := v.(error); ok {
 			// ignore -- msg is not important for this namespace
-			logrus.Tracef("filter group_filter next err: %+v", v.(error))
+			logrus.Tracef("filter next err: %+v", v.(error))
 			continue
-		}
-		// Ok
-		for _, filter := range group.children {
-			iter := filter.Filter.Run(msg_json)
+		} else {
+			metric := metric_from_any(v)
 
-			v, ok := iter.Next()
-			if !ok {
-				continue
-			}
-			if _, ok := v.(error); ok {
-				// ignore -- msg is not important for this namespace
-				logrus.Tracef("filter next err: %+v", v.(error))
-				continue
-			} else {
-				metric := metric_from_any(v)
-
-				if metric != nil {
-					filtered = append(filtered, *metric)
-				}
+			if metric != nil {
+				filtered = append(filtered, *metric)
 			}
 		}
-		// One was suscessful!
-		break
 	}
 
 	// go prom_metrics.Filter_time.Observe(float64(time.Since(filter_start) / time.Microsecond))

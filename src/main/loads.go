@@ -40,7 +40,12 @@ func with_function_compile_test() gojq.CompilerOption {
 }
 
 func load_jq(program_file string, options ...gojq.CompilerOption) *gojq.Code {
-	buf, _ := os.ReadFile(program_file)
+	buf, err := os.ReadFile(program_file)
+
+	if err != nil {
+		logrus.Errorf("load_jq readfile %s: %+v", program_file, err)
+		return nil
+	}
 
 	program, err := gojq.Parse(string(buf))
 	if err != nil {
@@ -101,13 +106,16 @@ func load_namespaces(monitors_dir string, configs []flow.Namespace) map[string]*
 }
 
 func load_filters(monitors_dir string, configs []flow.Namespace) *flow.Filter_root {
-	filters := load_group_filters(monitors_dir, configs)
+	filters := load_group_filters(monitors_dir)
 	for i := 0; i < len(configs); i++ {
 		namespace := &configs[i]
 		group := filters.Get_group(namespace.Group)
 		if group == nil {
-			logrus.Errorf("load_filters: Failed to load namespace %s because group %s does not exist", namespace.Namespace, namespace.Group)
-			continue
+			group = flow.New_group_node(namespace.Group)
+			filters.Add_group(
+				namespace.Group,
+				group,
+			)
 		}
 		path_filter_jq := fmt.Sprintf("%s/%s/%s", monitors_dir, namespace.Namespace, "filter.jq")
 		if filter := load_jq(path_filter_jq, with_function_namespace_filter_error(), with_function_log(), with_function_compile_test()); filter != nil {
@@ -119,18 +127,11 @@ func load_filters(monitors_dir string, configs []flow.Namespace) *flow.Filter_ro
 	return filters
 }
 
-func load_group_filters(monitors_dir string, configs []flow.Namespace) *flow.Filter_root {
-	root := flow.New_filter_tree()
-	for i := 0; i < len(configs); i++ {
-		namespace := &configs[i]
-		if root.Has_group(namespace.Group) {
-			continue
-		}
-		path_group_filter_jq := fmt.Sprintf("%s/%s/%s", monitors_dir, "groups", namespace.Group+".jq")
-		if group_filter := load_jq(path_group_filter_jq, with_function_group_filter_error(), with_function_compile_test()); group_filter != nil {
-			group := flow.New_group_node(namespace.Group, group_filter)
-			root.Add_group(namespace.Group, group)
-		}
+func load_group_filters(monitors_dir string) *flow.Filter_root {
+	path_group_filter_jq := fmt.Sprintf("%s/%s/%s", monitors_dir, "groups", "groups.jq")
+	if group_filter := load_jq(path_group_filter_jq, with_function_group_filter_error(), with_function_compile_test()); group_filter != nil {
+		return flow.New_filter_tree(group_filter)
 	}
-	return root
+	logrus.Panicf("load_group_filters no group filter")
+	return nil
 }
