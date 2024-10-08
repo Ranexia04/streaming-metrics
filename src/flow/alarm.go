@@ -22,7 +22,7 @@ func Alarm_ticker(namespace *Namespace, monitor_tick_chan chan<- *string) {
 		<-ticker.C
 
 		monitor_tick_chan <- &namespace.Namespace
-		prom_metrics.Prom_metric.Inc_monitors_ticks(namespace.Namespace)
+		prom_metrics.BasePromMetric.Inc_monitors_ticks(namespace.Namespace)
 	}
 }
 
@@ -82,9 +82,9 @@ func Producer(write_chan <-chan *Write_struct, producer pulsar.Producer) {
 func send_callback(namespace string) func(msgID pulsar.MessageID, pm *pulsar.ProducerMessage, err error) {
 	return func(msgID pulsar.MessageID, pm *pulsar.ProducerMessage, err error) {
 		if err != nil {
-			prom_metrics.Prom_metric.Inc_monitors_sent(namespace, fmt.Sprintf("%v", err))
+			prom_metrics.BasePromMetric.Inc_monitors_sent(namespace, fmt.Sprintf("%v", err))
 		} else {
-			prom_metrics.Prom_metric.Inc_monitors_sent(namespace, "ok")
+			prom_metrics.BasePromMetric.Inc_monitors_sent(namespace, "ok")
 		}
 	}
 }

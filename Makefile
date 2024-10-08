@@ -1,6 +1,6 @@
-container_name=streaming_monitors
-image_name=streaming_monitors
-image_version=0.1.2
+container_name=streaming_metrics
+image_name=streaming_metrics
+image_version=0.0.0
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true
@@ -27,12 +27,12 @@ test_gojq:
 	./tests/test_gojq.sh
 
 run_container: build_cache
-	docker run --rm --name ${container_name} --net host \
+	podman run --rm --name ${container_name} --net host \
 		-v `pwd`/monitors/:/app/monitors/:z \
 		-v `pwd`/persistent_data/:/app/persistent_data/:z \
 		--env LOG_LEVEL=debug \
 		${image_name}:${image_version}
-#docker logs -f ${container_name}
+#podman logs -f ${container_name}
 
 # workaround for dockerfile context
 begin_build: end_build
@@ -45,19 +45,19 @@ end_build:
 
 build: begin_build
 	echo "Building ${image_name}:${image_version} --no-cache"
-	docker build -t ${image_name}:${image_version} . --no-cache
+	podman build -t ${image_name}:${image_version} . --no-cache
 	make end_build
 
 build_cache: begin_build
 	echo "Building ${image_name}:${image_version} --with-cache"
-	docker build -t ${image_name}:${image_version} .
+	podman build -t ${image_name}:${image_version} .
 	make end_build
 
-docker_hub: build
-	./push_dockerhub.sh ${image_name} ${image_version}
+podman_hub: build
+	./push_podmanhub.sh ${image_name} ${image_version}
 
 start_pulsar:
-	docker run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:latest bin/pulsar standalone
+	podman run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:latest bin/pulsar standalone
 
 clean:
 	rm ${container_name}; \
@@ -67,4 +67,4 @@ clean:
 	rm -r monitors/TEST_*; \
 	rm -r gojq_extention
 
-.PHONY: clean start_pulsar docker_hub build_cache build run_container test_gojq launch_pprof pprof build_go run_trace curl main
+.PHONY: clean start_pulsar podman_hub build_cache build run_container test_gojq launch_pprof pprof build_go run_trace curl main

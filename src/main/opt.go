@@ -44,7 +44,7 @@ type opt struct {
 	tickerseconds uint
 }
 
-func from_args() opt {
+func loadArgs() opt {
 
 	var opt opt
 

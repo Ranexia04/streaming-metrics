@@ -12,7 +12,7 @@ import (
 	"example.com/streaming_monitors/src/prom_metrics"
 )
 
-func logging(level string) {
+func setupLogging(level string) {
 	logrus.SetFormatter(&logrus.JSONFormatter{
 		//FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.000Z07:00",
@@ -25,7 +25,7 @@ func logging(level string) {
 	}
 }
 
-func new_client(url string, trust_cert_file string, cert_file string, key_file string, allow_insecure_connection bool) pulsar.Client {
+func newClient(url string, trust_cert_file string, cert_file string, key_file string, allow_insecure_connection bool) pulsar.Client {
 	var client pulsar.Client
 	var err error
 	var auth pulsar.Authentication
@@ -54,25 +54,24 @@ func new_client(url string, trust_cert_file string, cert_file string, key_file s
 }
 
 func main() {
-	opt := from_args()
-	logging(opt.loglevel)
+	opt := loadArgs()
+
+	setupLogging(opt.loglevel)
 	logrus.Infof("%+v", opt)
 
-	go prom_metrics.Setup_prometheus(opt.prometheusport, opt.activate_observe_processing_time)
+	go prom_metrics.SetupPrometheus(opt.prometheusport, opt.activate_observe_processing_time)
 
 	// Clients
-	source_client := new_client(opt.sourcepulsar, opt.sourcetrustcerts, opt.sourcecertfile, opt.sourcekeyfile, opt.sourceallowinsecureconnection)
-	dest_client := new_client(opt.destpulsar, opt.desttrustcerts, opt.destcertfile, opt.destkeyfile, opt.destallowinsecureconnection)
+	sourceClient := newClient(opt.sourcepulsar, opt.sourcetrustcerts, opt.sourcecertfile, opt.sourcekeyfile, opt.sourceallowinsecureconnection)
+	destClient := newClient(opt.destpulsar, opt.desttrustcerts, opt.destcertfile, opt.destkeyfile, opt.destallowinsecureconnection)
 
-	defer source_client.Close()
-	defer dest_client.Close()
+	defer sourceClient.Close()
+	defer destClient.Close()
 
 	consume_chan := make(chan pulsar.ConsumerMessage, 2000)
-	monitor_ticker_chan := make(chan *string, 500)
-	write_chan := make(chan *flow.Write_struct, 2000)
 	ack_chan := make(chan pulsar.ConsumerMessage, 2000)
 
-	consumer, err := source_client.Subscribe(pulsar.ConsumerOptions{
+	consumer, err := sourceClient.Subscribe(pulsar.ConsumerOptions{
 		Topics:                      strings.Split(opt.sourcetopic, ";"),
 		SubscriptionName:            opt.sourcesubscription,
 		Name:                        opt.sourcename,
@@ -85,45 +84,23 @@ func main() {
 		logrus.Fatalln("Failed create consumer. Reason: ", err)
 	}
 
-	producer, err := dest_client.CreateProducer(pulsar.ProducerOptions{
-		Topic:                   opt.desttopic,
-		Name:                    opt.destname,
-		BatchingMaxPublishDelay: time.Millisecond * time.Duration(opt.batchmaxpublishdelay),
-		BatchingMaxMessages:     opt.batchmaxmessages,
-		BatchingMaxSize:         opt.batchingmaxsize,
-	})
-	if err != nil {
-		logrus.Fatalln("Failed create producer. Reason: ", err)
-	}
-
 	defer consumer.Close()
-	defer producer.Close()
 
-	configs := load_configs(opt.monitorsdir)
-	namespaces := load_namespaces(opt.monitorsdir, configs)
-	filters := load_filters(opt.monitorsdir, configs)
+	configs := loadConfigs(opt.monitorsdir)
+	namespaces := loadNamespaces(opt.monitorsdir, configs)
+	filters := loadFilters(opt.monitorsdir, configs)
 
-	prom_metrics.Prom_metric.Number_of_namespaces(len(namespaces))
+	prom_metrics.BasePromMetric.Number_of_namespaces(len(namespaces))
 
 	// Logic
-	go flow.Producer(write_chan, producer)
-
 	tick := time.NewTicker(time.Second * time.Duration(opt.tickerseconds))
 	for i := 0; i < int(opt.consumerthreads); i++ {
 		go flow.Consumer(consume_chan, ack_chan, namespaces, filters, tick.C)
 	}
 
-	for i := 0; i < int(opt.monitorthreads); i++ {
-		go flow.Alarm(namespaces, monitor_ticker_chan, write_chan)
-	}
-
-	for _, namespace := range namespaces {
-		go flow.Alarm_ticker(namespace, monitor_ticker_chan)
-	}
-
 	if opt.pprofon {
-		go activate_profiling(opt.pprofdir, time.Duration(opt.pprofduration)*time.Second)
+		go activateProfiling(opt.pprofdir, time.Duration(opt.pprofduration)*time.Second)
 	}
 
-	flow.Acks(consumer, ack_chan)
+	flow.Acknowledger(consumer, ack_chan)
 }

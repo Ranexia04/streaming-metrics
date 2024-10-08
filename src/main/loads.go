@@ -62,7 +62,7 @@ func load_jq(program_file string, options ...gojq.CompilerOption) *gojq.Code {
 	return compiled_program
 }
 
-func load_configs(monitors_dir string) []flow.Namespace {
+func loadConfigs(monitors_dir string) []flow.Namespace {
 	files, err := os.ReadDir(monitors_dir + "/configs/")
 	if err != nil {
 		logrus.Panicf("load_configs unable to open directory %s %+v", monitors_dir+"/configs/", err)
@@ -84,7 +84,7 @@ func load_configs(monitors_dir string) []flow.Namespace {
 	return namespaces
 }
 
-func load_namespaces(monitors_dir string, configs []flow.Namespace) map[string]*flow.Namespace {
+func loadNamespaces(monitors_dir string, configs []flow.Namespace) map[string]*flow.Namespace {
 	namespaces := make(map[string]*flow.Namespace)
 	for i := 0; i < len(configs); i++ {
 		namespace := &configs[i]
@@ -105,7 +105,7 @@ func load_namespaces(monitors_dir string, configs []flow.Namespace) map[string]*
 	return namespaces
 }
 
-func load_filters(monitors_dir string, configs []flow.Namespace) *flow.Filter_root {
+func loadFilters(monitors_dir string, configs []flow.Namespace) *flow.Filter_root {
 	filters := load_group_filters(monitors_dir)
 	for i := 0; i < len(configs); i++ {
 		namespace := &configs[i]

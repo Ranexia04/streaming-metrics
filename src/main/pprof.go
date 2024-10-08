@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func activate_profiling(pprofdir string, duration time.Duration) {
+func activateProfiling(pprofdir string, duration time.Duration) {
 	if _, err := os.Stat(pprofdir); os.IsNotExist(err) {
 		os.MkdirAll(pprofdir, 0700)
 	}

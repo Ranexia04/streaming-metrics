@@ -33,7 +33,7 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 			push_start := time.Now()
 			for i := 0; i < len(metrics); i++ {
 				metric := &metrics[i]
-				prom_metrics.Prom_metric.Inc_namespace_number_filtered_msg(metric.namespace)
+				prom_metrics.BasePromMetric.Inc_namespace_number_filtered_msg(metric.namespace)
 				if namespace, ok := namespaces[metric.namespace]; ok {
 					namespace.push(metric)
 				} else {
@@ -41,12 +41,12 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 				}
 			}
 			push_dur := time.Since(push_start)
-			prom_metrics.Prom_metric.Observe_push_time(push_dur)
+			prom_metrics.BasePromMetric.Observe_push_time(push_dur)
 			ack_chan <- msg
 
 			proccess_dur := time.Since(consume_start)
-			prom_metrics.Prom_metric.Observe_filter_time(filter_dur)
-			prom_metrics.Prom_metric.Observe_processing_time(proccess_dur)
+			prom_metrics.BasePromMetric.Observe_filter_time(filter_dur)
+			prom_metrics.BasePromMetric.Observe_processing_time(proccess_dur)
 
 		case <-tick:
 			for _, namespace := range namespaces {
@@ -129,7 +129,7 @@ func filter(msg []byte, filters *Filter_root) []Metric {
 	return filtered
 }
 
-func Acks(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {
+func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {
 	last_instant := time.Now()
 	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
@@ -144,7 +144,7 @@ func Acks(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {
 			}
 			ack++
 
-			prom_metrics.Prom_metric.Inc_number_processed_msg()
+			prom_metrics.BasePromMetric.Inc_number_processed_msg()
 
 		case <-tick.C:
 			since := time.Since(last_instant)
