@@ -8,8 +8,8 @@ import (
 	pulsar_log "github.com/apache/pulsar-client-go/pulsar/log"
 	"github.com/sirupsen/logrus"
 
-	"example.com/streaming_monitors/src/flow"
-	"example.com/streaming_monitors/src/prom_metrics"
+	"example.com/streaming-metrics/src/flow"
+	"example.com/streaming-metrics/src/prom"
 )
 
 func setupLogging(level string) {
@@ -59,42 +59,42 @@ func main() {
 	setupLogging(opt.loglevel)
 	logrus.Infof("%+v", opt)
 
-	go prom_metrics.SetupPrometheus(opt.prometheusport, opt.activate_observe_processing_time)
+	go prom.SetupPrometheus(opt.prometheusPort, opt.activateObserveProcessingTime)
 
 	// Clients
-	sourceClient := newClient(opt.sourcepulsar, opt.sourcetrustcerts, opt.sourcecertfile, opt.sourcekeyfile, opt.sourceallowinsecureconnection)
-	destClient := newClient(opt.destpulsar, opt.desttrustcerts, opt.destcertfile, opt.destkeyfile, opt.destallowinsecureconnection)
+	sourceClient := newClient(opt.sourcePulsar, opt.sourceTrustCerts, opt.sourceCertFile, opt.sourceKeyFile, opt.sourceAllowInsecureConnection)
 
 	defer sourceClient.Close()
-	defer destClient.Close()
 
 	consume_chan := make(chan pulsar.ConsumerMessage, 2000)
 	ack_chan := make(chan pulsar.ConsumerMessage, 2000)
 
-	consumer, err := sourceClient.Subscribe(pulsar.ConsumerOptions{
-		Topics:                      strings.Split(opt.sourcetopic, ";"),
-		SubscriptionName:            opt.sourcesubscription,
-		Name:                        opt.sourcename,
-		Type:                        pulsar.Exclusive,
-		SubscriptionInitialPosition: pulsar.SubscriptionPositionLatest,
-		MessageChannel:              consume_chan,
-		ReceiverQueueSize:           2000,
-	})
+	consumer, err := sourceClient.Subscribe(
+		pulsar.ConsumerOptions{
+			Topics:                      strings.Split(opt.sourceTopic, ";"),
+			SubscriptionName:            opt.sourceSubscription,
+			Name:                        opt.sourceName,
+			Type:                        pulsar.Exclusive,
+			SubscriptionInitialPosition: pulsar.SubscriptionPositionLatest,
+			MessageChannel:              consume_chan,
+			ReceiverQueueSize:           2000,
+		},
+	)
 	if err != nil {
 		logrus.Fatalln("Failed create consumer. Reason: ", err)
 	}
 
 	defer consumer.Close()
 
-	configs := loadConfigs(opt.monitorsdir)
-	namespaces := loadNamespaces(opt.monitorsdir, configs)
-	filters := loadFilters(opt.monitorsdir, configs)
+	namespaceConfigs := loadNamespaceConfigs(opt.metricsDir)
+	namespaces := loadNamespaces(namespaceConfigs)
+	filters := loadFilters(opt.metricsDir, namespaceConfigs)
 
-	prom_metrics.BasePromMetric.Number_of_namespaces(len(namespaces))
+	prom.BasePromMetric.SetNumberNamespaces(len(namespaces))
 
 	// Logic
 	tick := time.NewTicker(time.Second * time.Duration(opt.tickerseconds))
-	for i := 0; i < int(opt.consumerthreads); i++ {
+	for i := 0; i < int(opt.consumerThreads); i++ {
 		go flow.Consumer(consume_chan, ack_chan, namespaces, filters, tick.C)
 	}
 

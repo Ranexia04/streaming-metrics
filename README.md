@@ -1,4 +1,4 @@
-streaming monitors, a multistore configurable monitor that uses pulsar for streaming
+streaming metrics, a multistore configurable monitor that uses pulsar for streaming
 
 Can be used for alarm, reports, etc...
 

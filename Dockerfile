@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS BuilStage
+FROM docker.io/golang:1.22-alpine AS BuildStage
 
 ENV CGO_ENABLED 0
 
@@ -13,12 +13,12 @@ RUN go mod download
 
 COPY src/ ./src/
 
-RUN go build -C src/main -o /app/streaming_monitors
+RUN go build -C src/main -o /app/streaming-metrics
 
-FROM alpine:latest
+FROM docker.io/alpine:latest
 
 WORKDIR /app
 
-COPY --from=BuilStage /app/streaming_monitors ./streaming_monitors
+COPY --from=BuildStage /app/streaming-metrics ./streaming-metrics
 
-ENTRYPOINT [ "./streaming_monitors" ]
+ENTRYPOINT [ "./streaming-metrics" ]

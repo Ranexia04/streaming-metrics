@@ -28,11 +28,9 @@ test_gojq:
 
 run_container: build_cache
 	podman run --rm --name ${container_name} --net host \
-		-v `pwd`/monitors/:/app/monitors/:z \
-		-v `pwd`/persistent_data/:/app/persistent_data/:z \
+		-v `pwd`/metrics/:/app/metrics/:z \
 		--env LOG_LEVEL=debug \
 		${image_name}:${image_version}
-#podman logs -f ${container_name}
 
 # workaround for dockerfile context
 begin_build: end_build
@@ -53,18 +51,18 @@ build_cache: begin_build
 	podman build -t ${image_name}:${image_version} .
 	make end_build
 
-podman_hub: build
-	./push_podmanhub.sh ${image_name} ${image_version}
+docker_hub: build
+	./push_dockerhub.sh ${image_name} ${image_version}
 
 start_pulsar:
-	podman run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:latest bin/pulsar standalone
+	podman run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 docker.io/apachepulsar/pulsar:latest bin/pulsar standalone
 
 clean:
 	rm ${container_name}; \
 	rm -r persistent_data; \
 	rm pprof/2023*; \
-	rm monitors/configs/TEST_*; \
-	rm -r monitors/TEST_*; \
+	rm metrics/configs/TEST_*; \
+	rm -r metrics/TEST_*; \
 	rm -r gojq_extention
 
 .PHONY: clean start_pulsar podman_hub build_cache build run_container test_gojq launch_pprof pprof build_go run_trace curl main

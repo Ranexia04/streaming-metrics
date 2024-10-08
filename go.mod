@@ -1,4 +1,4 @@
-module example.com/streaming_monitors
+module example.com/streaming-metrics
 
 go 1.21
 

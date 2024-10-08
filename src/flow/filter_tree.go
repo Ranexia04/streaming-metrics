@@ -6,57 +6,57 @@ import "github.com/itchyny/gojq"
  * Filter root
  */
 
-type Filter_root struct {
+type FilterRoot struct {
 	group_filter *gojq.Code
-	groups       map[string]*Group_node
+	groups       map[string]*GroupNode
 }
 
-func New_filter_tree(group_filter *gojq.Code) *Filter_root {
-	return &Filter_root{
+func NewFilterTree(group_filter *gojq.Code) *FilterRoot {
+	return &FilterRoot{
 		group_filter: group_filter,
-		groups:       make(map[string]*Group_node),
+		groups:       make(map[string]*GroupNode),
 	}
 }
 
-func (r *Filter_root) Has_group(group string) bool {
+func (r *FilterRoot) HasGroup(group string) bool {
 	_, ok := r.groups[group]
 	return ok
 }
 
-func (r *Filter_root) Add_group(group string, node *Group_node) {
+func (r *FilterRoot) AddGroup(group string, node *GroupNode) {
 	r.groups[group] = node
 }
 
-func (r *Filter_root) Get_group(group string) *Group_node {
+func (r *FilterRoot) GetGroup(group string) *GroupNode {
 	return r.groups[group]
 }
 
 /*
- * Group_node
+ * GroupNode
  */
 
-type Group_node struct {
+type GroupNode struct {
 	name string
 	//group_filter *gojq.Code
-	children []*Leaf_node
+	children []*LeafNode
 }
 
-func New_group_node(name string /*, group_filter *gojq.Code*/) *Group_node {
-	return &Group_node{
+func NewGroupNode(name string /*, group_filter *gojq.Code*/) *GroupNode {
+	return &GroupNode{
 		name: name,
 		//group_filter: group_filter,
-		children: make([]*Leaf_node, 0),
+		children: make([]*LeafNode, 0),
 	}
 }
 
-func (gf *Group_node) Add_child(leaf *Leaf_node) {
+func (gf *GroupNode) AddChild(leaf *LeafNode) {
 	gf.children = append(gf.children, leaf)
 }
 
 /*
- * Leaf_node
+ * LeafNode
  */
 
-type Leaf_node struct {
+type LeafNode struct {
 	Filter *gojq.Code
 }
