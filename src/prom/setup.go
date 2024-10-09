@@ -25,105 +25,97 @@ type BasePromMetrics struct {
 	ObserveFilterTime       func(t time.Duration)
 	IncNamespaceFilteredMsg func(namespace string)
 	ObservePushTime         func(t time.Duration)
-
-	activateObserveProcessingTime bool
 }
 
-func (BasePromMetric *BasePromMetrics) register(reg *prometheus.Registry) {
-	reg.MustRegister(BasePromMetric.namespaceCount)
-	reg.MustRegister(BasePromMetric.pulsarProcessedMsg)
-	reg.MustRegister(BasePromMetric.filteredMsg)
-
-	if BasePromMetric.activateObserveProcessingTime {
-		reg.MustRegister(BasePromMetric.filterTime)
-		reg.MustRegister(BasePromMetric.pushTime)
-		reg.MustRegister(BasePromMetric.processTime)
-	}
-}
-
-func initBasePromMetrics(activateObserveProcessingTime bool) *BasePromMetrics {
-	basePromMetric := &BasePromMetrics{
-		activateObserveProcessingTime: activateObserveProcessingTime,
-
-		namespaceCount: prometheus.NewCounter(
-			prometheus.CounterOpts{
-				Name: "namespace_count",
-				Help: "The total number of namespaces",
-			},
-		),
-		pulsarProcessedMsg: prometheus.NewCounter(
-			prometheus.CounterOpts{
-				Name: "pulsar_processed_msg",
-				Help: "The total number of processed messages from pulsar.",
-			},
-		),
-		filteredMsg: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "filtered_messages",
-				Help: "The number of metrics generated per namespace",
-			}, []string{"namespace"},
-		),
-		filterTime: prometheus.NewSummary(
-			prometheus.SummaryOpts{
-				Name:       "filter_time",
-				Help:       "The time to apply all filters to a message (µs)",
-				Objectives: map[float64]float64{0.50: 0.1, 0.80: 0.05, 0.90: 0.01, 0.95: 0.005, 0.99: 0.005},
-			},
-		),
-		pushTime: prometheus.NewSummary(
-			prometheus.SummaryOpts{
-				Name:       "push_time",
-				Help:       "The time to push a filtered message per namespace (µs)",
-				Objectives: map[float64]float64{0.50: 0.1, 0.80: 0.05, 0.90: 0.01, 0.95: 0.005, 0.99: 0.005},
-			},
-		),
-		processTime: prometheus.NewSummary(
-			prometheus.SummaryOpts{
-				Name:       "process_time",
-				Help:       "The time to process a message from pulsar (µs)",
-				Objectives: map[float64]float64{0.50: 0.1, 0.80: 0.05, 0.90: 0.01, 0.95: 0.005, 0.99: 0.005},
-			},
-		),
+func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
+	MyBasePromMetrics.SetNumberNamespaces = func(n int) {
+		MyBasePromMetrics.namespaceCount.Add(float64(n))
 	}
 
-	basePromMetric.SetNumberNamespaces = func(n int) {
-		basePromMetric.namespaceCount.Add(float64(n))
+	MyBasePromMetrics.IncProcessedMsg = func() {
+		MyBasePromMetrics.pulsarProcessedMsg.Inc()
 	}
 
-	basePromMetric.IncProcessedMsg = func() {
-		basePromMetric.pulsarProcessedMsg.Inc()
+	MyBasePromMetrics.IncNamespaceFilteredMsg = func(namespace string) {
+		MyBasePromMetrics.filteredMsg.With(prometheus.Labels{"namespace": namespace}).Inc()
 	}
 
-	basePromMetric.IncNamespaceFilteredMsg = func(namespace string) {
-		basePromMetric.filteredMsg.With(prometheus.Labels{"namespace": namespace}).Inc()
-	}
-
-	if basePromMetric.activateObserveProcessingTime {
-		basePromMetric.ObserveProcessingTime = func(t time.Duration) {
-			go basePromMetric.processTime.Observe(float64(t / time.Microsecond))
+	if activateObserveProcessingTime {
+		MyBasePromMetrics.ObserveProcessingTime = func(t time.Duration) {
+			go MyBasePromMetrics.processTime.Observe(float64(t / time.Microsecond))
 		}
-		basePromMetric.ObserveFilterTime = func(t time.Duration) {
-			go basePromMetric.filterTime.Observe(float64(t / time.Microsecond))
+		MyBasePromMetrics.ObserveFilterTime = func(t time.Duration) {
+			go MyBasePromMetrics.filterTime.Observe(float64(t / time.Microsecond))
 		}
-		basePromMetric.ObservePushTime = func(t time.Duration) {
-			go basePromMetric.pushTime.Observe(float64(t / time.Microsecond))
+		MyBasePromMetrics.ObservePushTime = func(t time.Duration) {
+			go MyBasePromMetrics.pushTime.Observe(float64(t / time.Microsecond))
 		}
 	} else {
-		basePromMetric.ObserveProcessingTime = func(t time.Duration) {}
-		basePromMetric.ObserveFilterTime = func(t time.Duration) {}
-		basePromMetric.ObservePushTime = func(t time.Duration) {}
+		MyBasePromMetrics.ObserveProcessingTime = func(t time.Duration) {}
+		MyBasePromMetrics.ObserveFilterTime = func(t time.Duration) {}
+		MyBasePromMetrics.ObservePushTime = func(t time.Duration) {}
 	}
-
-	return basePromMetric
 }
 
-var BasePromMetric *BasePromMetrics
+func registerBasePromMetrics(activateObserveProcessingTime bool) {
+	reg.MustRegister(MyBasePromMetrics.namespaceCount)
+	reg.MustRegister(MyBasePromMetrics.pulsarProcessedMsg)
+	reg.MustRegister(MyBasePromMetrics.filteredMsg)
+
+	if activateObserveProcessingTime {
+		reg.MustRegister(MyBasePromMetrics.filterTime)
+		reg.MustRegister(MyBasePromMetrics.pushTime)
+		reg.MustRegister(MyBasePromMetrics.processTime)
+	}
+}
+
+var MyBasePromMetrics *BasePromMetrics = &BasePromMetrics{
+	namespaceCount: prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "namespace_count",
+			Help: "The total number of namespaces",
+		},
+	),
+	pulsarProcessedMsg: prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "pulsar_processed_msg",
+			Help: "The total number of processed messages from pulsar.",
+		},
+	),
+	filteredMsg: prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "filtered_messages",
+			Help: "The number of metrics generated per namespace",
+		}, []string{"namespace"},
+	),
+	filterTime: prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name:       "filter_time",
+			Help:       "The time to apply all filters to a message (µs)",
+			Objectives: map[float64]float64{0.50: 0.1, 0.80: 0.05, 0.90: 0.01, 0.95: 0.005, 0.99: 0.005},
+		},
+	),
+	pushTime: prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name:       "push_time",
+			Help:       "The time to push a filtered message per namespace (µs)",
+			Objectives: map[float64]float64{0.50: 0.1, 0.80: 0.05, 0.90: 0.01, 0.95: 0.005, 0.99: 0.005},
+		},
+	),
+	processTime: prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name:       "process_time",
+			Help:       "The time to process a message from pulsar (µs)",
+			Objectives: map[float64]float64{0.50: 0.1, 0.80: 0.05, 0.90: 0.01, 0.95: 0.005, 0.99: 0.005},
+		},
+	),
+}
+
+var reg *prometheus.Registry = prometheus.NewRegistry()
 
 func SetupPrometheus(prometheusPort uint, activateObserveProcessingTime bool) {
-	reg := prometheus.NewRegistry()
-
-	BasePromMetric = initBasePromMetrics(activateObserveProcessingTime)
-	BasePromMetric.register(reg)
+	initBasePromMetricsHandlers(activateObserveProcessingTime)
+	registerBasePromMetrics(activateObserveProcessingTime)
 
 	http.Handle(
 		"/metrics",

@@ -86,12 +86,21 @@ func main() {
 
 	defer consumer.Close()
 
+	logrus.Infoln("loading namespaces")
 	namespaces := loadNamespaces(opt.metricsDir)
+	logrus.Infoln("loading filters")
 	filters := loadFilters(opt.metricsDir, namespaces)
 
-	prom.BasePromMetric.SetNumberNamespaces(len(namespaces))
+	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
-	prom.CreateMetrics(namespaces)
+	logrus.Infoln("creating metrics")
+	for namespaceName, namespace := range namespaces {
+		for metricName, metric := range namespace.Metrics {
+			metric.NewPromMetric()
+			// prom.AddMetric(namespaceName, metricName, metric)
+		}
+	}
+
 	// Logic
 	tick := time.NewTicker(time.Second * time.Duration(opt.tickerseconds))
 	for i := 0; i < int(opt.consumerThreads); i++ {

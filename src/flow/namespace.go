@@ -3,6 +3,8 @@ package flow
 import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+
+	"example.com/streaming-metrics/src/prom"
 )
 
 type Event struct {
@@ -12,17 +14,9 @@ type Event struct {
 }
 
 type Namespace struct {
-	Name    string   `json:"namespace" yaml:"namespace"`
-	Group   string   `json:"group" yaml:"group"`
-	Metrics []Metric `json:"metrics" yaml:"metrics"`
-}
-
-type Metric struct {
-	Name    string    `yaml:"name"`
-	Help    string    `yaml:"help"`
-	Type    string    `yaml:"type"`
-	Labels  []string  `yaml:"labels"`
-	Buckets []float64 `yaml:"buckets"` // Only for histograms
+	Name    string                 `json:"namespace" yaml:"namespace"`
+	Group   string                 `json:"group" yaml:"group"`
+	Metrics map[string]prom.Metric `json:"metrics" yaml:"metrics"`
 }
 
 /*

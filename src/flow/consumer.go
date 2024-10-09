@@ -26,28 +26,28 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 
 			consumeStart := time.Now()
 
-			filteredEvents := filter(msg.Payload(), filters)
+			events := filterEvents(msg.Payload(), filters)
 
 			filterDur := time.Since(consumeStart)
 
 			push_start := time.Now()
-			for i := 0; i < len(filteredEvents); i++ {
-				metric := &filteredEvents[i]
-				prom.BasePromMetric.IncNamespaceFilteredMsg(metric.namespace)
-				if namespace, ok := namespaces[metric.namespace]; ok {
-					logrus.Printf("%v", namespace.Name)
-					// add inc logic
-				} else {
-					logrus.Errorf("No namespace named: %s", metric.namespace)
+			for _, event := range events {
+				prom.MyBasePromMetrics.IncNamespaceFilteredMsg(event.namespace)
+
+				namespace, ok := namespaces[event.namespace]
+				if !ok {
+					logrus.Errorf("No namespace named: %s", event.namespace)
 				}
+				logrus.Printf("%v", namespace.Name)
+				updateMetrics(*namespace, event)
 			}
 			pushDur := time.Since(push_start)
-			prom.BasePromMetric.ObservePushTime(pushDur)
+			prom.MyBasePromMetrics.ObservePushTime(pushDur)
 			ack_chan <- msg
 
 			processDur := time.Since(consumeStart)
-			prom.BasePromMetric.ObserveFilterTime(filterDur)
-			prom.BasePromMetric.ObserveProcessingTime(processDur)
+			prom.MyBasePromMetrics.ObserveFilterTime(filterDur)
+			prom.MyBasePromMetrics.ObserveProcessingTime(processDur)
 
 		case <-log_tick.C:
 			since := time.Since(lastInstant)
@@ -58,7 +58,7 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 	}
 }
 
-func filter(msg []byte, filters *FilterRoot) []Event {
+func filterEvents(msg []byte, filters *FilterRoot) []Event {
 	filteredEvents := make([]Event, 0)
 
 	var msgJson any
@@ -123,6 +123,18 @@ func filter(msg []byte, filters *FilterRoot) []Event {
 	return filteredEvents
 }
 
+func updateMetrics(namespace Namespace, event Event) {
+	for eventMetricName, eventMetric := range event.metrics.(map[string]interface{}) {
+		metric, exists := namespace.Metrics[eventMetricName]
+		if !exists {
+			logrus.Errorf("updateMetrics prometheus metric %v not found", eventMetricName)
+			continue
+		}
+
+		metric.UpdateMetric(namespace.Name, eventMetric)
+	}
+}
+
 func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {
 	lastInstant := time.Now()
 	tick := time.NewTicker(time.Minute)
@@ -132,13 +144,12 @@ func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessa
 	for {
 		select {
 		case msg := <-ack_chan:
-
 			if err := consumer.Ack(msg); err != nil {
 				logrus.Warnf("consumer.Acks err: %+v", err)
 			}
 			ack++
 
-			prom.BasePromMetric.IncProcessedMsg()
+			prom.MyBasePromMetrics.IncProcessedMsg()
 
 		case <-tick.C:
 			since := time.Since(lastInstant)
