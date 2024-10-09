@@ -23,13 +23,13 @@ func withFunctionGroupFilterError() gojq.CompilerOption {
 	})
 }
 
-// def log($namespace; $time; $metric): {"namespace": $namespace, "time": $time, "metric": $metric};
+// def log($namespace; $time; $metric): {"namespace": $namespace, "time": $time, "metrics": $metrics};
 func withFunctionLog() gojq.CompilerOption {
 	return gojq.WithFunction("log", 3, 3, func(in any, args []any) any {
 		return map[string]any{
 			"namespace": args[0],
 			"time":      args[1],
-			"metric":    args[2],
+			"metrics":   args[2],
 		}
 	})
 }
@@ -87,7 +87,7 @@ func loadNamespaces(configs []flow.Namespace) map[string]*flow.Namespace {
 	namespaces := make(map[string]*flow.Namespace)
 	for i := 0; i < len(configs); i++ {
 		namespace := &configs[i]
-		namespaces[namespace.Namespace] = namespace
+		namespaces[namespace.Name] = namespace
 	}
 
 	return namespaces
@@ -105,7 +105,7 @@ func loadFilters(metricsDir string, configs []flow.Namespace) *flow.FilterRoot {
 				group,
 			)
 		}
-		filter_jq_path := fmt.Sprintf("%s/%s/%s", metricsDir, namespace.Namespace, "filter.jq")
+		filter_jq_path := fmt.Sprintf("%s/%s/%s", metricsDir, namespace.Name, "filter.jq")
 		if filter := loadJq(filter_jq_path, withFunctionNamespaceFilterError(), withFunctionLog(), withFunctionCompileTest()); filter != nil {
 			group.AddChild(
 				&flow.LeafNode{

@@ -5,15 +5,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Metric struct {
+type Event struct {
 	namespace string
 	time      string
-	metric    any
+	metrics   any
 }
 
 type Namespace struct {
-	Group     string `json:"group" yaml:"group"`
-	Namespace string `json:"namespace" yaml:"namespace"`
+	Name  string `json:"namespace" yaml:"namespace"`
+	Group string `json:"group" yaml:"group"`
 }
 
 /*
@@ -24,12 +24,12 @@ func NewNamespace(buf []byte) *Namespace {
 	var namespace Namespace
 
 	if err := yaml.Unmarshal(buf, &namespace); err != nil {
-		logrus.Errorf("New_namespace: %+v", err)
+		logrus.Errorf("NewNamespace: %+v", err)
 		return nil
 	}
 
 	if !namespace.validateConfig() {
-		logrus.Errorf("New_namespace: not a valid config")
+		logrus.Errorf("NewNamespace: not a valid config")
 		return nil
 	}
 
@@ -37,28 +37,28 @@ func NewNamespace(buf []byte) *Namespace {
 }
 
 func (namespace *Namespace) validateConfig() bool {
-	return len(namespace.Namespace) > 0
+	return len(namespace.Name) > 0
 }
 
-func metricFromAny(in any) *Metric {
+func eventFromAny(in any) *Event {
 	switch v := in.(type) {
 	case map[string]any:
 		namespace, ok_namespace := v["namespace"].(string)
 		time, ok_time := v["time"].(string)
-		metric, ok_metric := v["metric"]
+		metrics, ok_metrics := v["metrics"]
 
-		if !ok_namespace || !ok_time || !ok_metric {
-			logrus.Errorf("metricFromAny missing field from in map filter - status: namespace(%t) time(%t) metric(%t)", ok_namespace, ok_time, ok_metric)
+		if !ok_namespace || !ok_time || !ok_metrics {
+			logrus.Errorf("eventFromAny missing field from in map filter - status: namespace(%t) time(%t) metrics(%t)", ok_namespace, ok_time, ok_metrics)
 			return nil
 		}
 
-		return &Metric{
+		return &Event{
 			namespace: namespace,
 			time:      time,
-			metric:    metric,
+			metrics:   metrics,
 		}
 	default:
-		logrus.Errorf("metricFromAny filter did not return a map: %+v", in)
+		logrus.Errorf("eventFromAny filter did not return a map: %+v", in)
 		return nil
 	}
 

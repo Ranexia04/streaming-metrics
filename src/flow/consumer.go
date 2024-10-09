@@ -26,16 +26,16 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 
 			consumeStart := time.Now()
 
-			metrics := filter(msg.Payload(), filters)
+			filteredEvents := filter(msg.Payload(), filters)
 
 			filterDur := time.Since(consumeStart)
 
 			push_start := time.Now()
-			for i := 0; i < len(metrics); i++ {
-				metric := &metrics[i]
+			for i := 0; i < len(filteredEvents); i++ {
+				metric := &filteredEvents[i]
 				prom.BasePromMetric.IncNamespaceFilteredMsg(metric.namespace)
 				if namespace, ok := namespaces[metric.namespace]; ok {
-					logrus.Printf("%v", namespace.Namespace)
+					logrus.Printf("%v", namespace.Name)
 					// add inc logic
 				} else {
 					logrus.Errorf("No namespace named: %s", metric.namespace)
@@ -58,49 +58,47 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 	}
 }
 
-func filter(msg []byte, filters *FilterRoot) []Metric {
-	filtered := make([]Metric, 0)
+func filter(msg []byte, filters *FilterRoot) []Event {
+	filteredEvents := make([]Event, 0)
 
-	var msg_json any
+	var msgJson any
 
-	if err := json.Unmarshal(msg, &msg_json); err != nil {
+	if err := json.Unmarshal(msg, &msgJson); err != nil {
 		logrus.Errorf("filter unmarshal msg: %+v", err)
-		return filtered
+		return filteredEvents
 	}
 
-	// filter_start := time.Now()
-
-	iter := filters.group_filter.Run(msg_json)
+	iter := filters.groupFilter.Run(msgJson)
 
 	v, ok := iter.Next()
 	if !ok {
-		return filtered
+		return filteredEvents
 	}
 	if _, ok := v.(error); ok {
 		// ignore -- msg is not important for this namespace
-		logrus.Tracef("filter group_filter next err: %+v", v.(error))
-		return filtered
+		logrus.Tracef("group_filter next err: %+v", v.(error))
+		return filteredEvents
 	}
 
-	var group_name string
+	var groupName string
 
 	switch gn := v.(type) {
 	case string:
-		group_name = gn
+		groupName = gn
 
 	default:
 		logrus.Errorf("filter_root did not return string: %+v", v)
-		return filtered
+		return filteredEvents
 	}
 
-	group_filters, ok := filters.groups[group_name]
+	groupFilters, ok := filters.groups[groupName]
 	if !ok {
-		logrus.Errorf("filter_root group does not exist: %s", group_name)
-		return filtered
+		logrus.Errorf("filter_root group does not exist: %s", groupName)
+		return filteredEvents
 	}
 
-	for _, filter := range group_filters.children {
-		iter := filter.Filter.Run(msg_json)
+	for _, filter := range groupFilters.children {
+		iter := filter.Filter.Run(msgJson)
 
 		v, ok := iter.Next()
 		if !ok {
@@ -111,10 +109,10 @@ func filter(msg []byte, filters *FilterRoot) []Metric {
 			logrus.Tracef("filter next err: %+v", v.(error))
 			continue
 		} else {
-			metric := metricFromAny(v)
+			event := eventFromAny(v)
 
-			if metric != nil {
-				filtered = append(filtered, *metric)
+			if event != nil {
+				filteredEvents = append(filteredEvents, *event)
 			}
 		}
 	}
@@ -122,7 +120,7 @@ func filter(msg []byte, filters *FilterRoot) []Metric {
 	// go prom.Filter_time.Observe(float64(time.Since(filter_start) / time.Microsecond))
 	// go prom.Number_of_metrics_per_msg.Observe(float64(len(filtered)))
 
-	return filtered
+	return filteredEvents
 }
 
 func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {

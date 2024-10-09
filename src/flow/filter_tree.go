@@ -7,14 +7,14 @@ import "github.com/itchyny/gojq"
  */
 
 type FilterRoot struct {
-	group_filter *gojq.Code
-	groups       map[string]*GroupNode
+	groupFilter *gojq.Code
+	groups      map[string]*GroupNode
 }
 
 func NewFilterTree(group_filter *gojq.Code) *FilterRoot {
 	return &FilterRoot{
-		group_filter: group_filter,
-		groups:       make(map[string]*GroupNode),
+		groupFilter: group_filter,
+		groups:      make(map[string]*GroupNode),
 	}
 }
 
