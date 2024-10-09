@@ -124,7 +124,7 @@ func filter(msg []byte, filters *FilterRoot) []Event {
 }
 
 func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {
-	last_instant := time.Now()
+	lastInstant := time.Now()
 	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
 
@@ -141,8 +141,8 @@ func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessa
 			prom.BasePromMetric.IncProcessedMsg()
 
 		case <-tick.C:
-			since := time.Since(last_instant)
-			last_instant = time.Now()
+			since := time.Since(lastInstant)
+			lastInstant = time.Now()
 			logrus.Infof("Ack rate: %.3f msg/s", ack/float64(since/time.Second))
 			ack = 0
 		}

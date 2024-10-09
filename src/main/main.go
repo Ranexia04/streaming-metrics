@@ -86,12 +86,12 @@ func main() {
 
 	defer consumer.Close()
 
-	namespaceConfigs := loadNamespaceConfigs(opt.metricsDir)
-	namespaces := loadNamespaces(namespaceConfigs)
-	filters := loadFilters(opt.metricsDir, namespaceConfigs)
+	namespaces := loadNamespaces(opt.metricsDir)
+	filters := loadFilters(opt.metricsDir, namespaces)
 
 	prom.BasePromMetric.SetNumberNamespaces(len(namespaces))
 
+	prom.CreateMetrics(namespaces)
 	// Logic
 	tick := time.NewTicker(time.Second * time.Duration(opt.tickerseconds))
 	for i := 0; i < int(opt.consumerThreads); i++ {

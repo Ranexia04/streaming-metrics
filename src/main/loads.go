@@ -61,57 +61,48 @@ func loadJq(program_file string, options ...gojq.CompilerOption) *gojq.Code {
 	return compiled_program
 }
 
-func loadNamespaceConfigs(metricsDir string) []flow.Namespace {
+func loadNamespaces(metricsDir string) map[string]*flow.Namespace {
 	files, err := os.ReadDir(metricsDir + "/configs/")
 	if err != nil {
 		logrus.Panicf("load_configs unable to open directory %s %+v", metricsDir+"/configs/", err)
 	}
 
-	namespaceConfigs := make([]flow.Namespace, 0, len(files))
+	namespaces := make(map[string]*flow.Namespace)
 	for _, file := range files {
 		if !file.IsDir() {
-			buf, _ := os.ReadFile(metricsDir + "/configs/" + file.Name())
+			buf, err := os.ReadFile(metricsDir + "/configs/" + file.Name())
+			if err != nil {
+				logrus.Panicf("Unable to read file %s: %+v", file.Name(), err)
+			}
 
-			if namespaceConfig := flow.NewNamespace(buf); namespaceConfig == nil {
+			namespace := flow.NewNamespace(buf)
+			if namespace == nil {
 				logrus.Panicf("Unable to create namespace for file %s", file.Name())
 			} else {
-				namespaceConfigs = append(namespaceConfigs, *namespaceConfig)
+				namespaces[namespace.Name] = namespace
 			}
 		}
-	}
-
-	return namespaceConfigs
-}
-
-func loadNamespaces(configs []flow.Namespace) map[string]*flow.Namespace {
-	namespaces := make(map[string]*flow.Namespace)
-	for i := 0; i < len(configs); i++ {
-		namespace := &configs[i]
-		namespaces[namespace.Name] = namespace
 	}
 
 	return namespaces
 }
 
-func loadFilters(metricsDir string, configs []flow.Namespace) *flow.FilterRoot {
+func loadFilters(metricsDir string, configs map[string]*flow.Namespace) *flow.FilterRoot {
 	filters := loadGroupFilters(metricsDir)
-	for i := 0; i < len(configs); i++ {
-		namespace := &configs[i]
+	// Iterate over the map using a for range loop
+	for _, namespace := range configs {
 		group := filters.GetGroup(namespace.Group)
 		if group == nil {
 			group = flow.NewGroupNode(namespace.Group)
-			filters.AddGroup(
-				namespace.Group,
-				group,
-			)
+			filters.AddGroup(namespace.Group, group)
 		}
-		filter_jq_path := fmt.Sprintf("%s/%s/%s", metricsDir, namespace.Name, "filter.jq")
-		if filter := loadJq(filter_jq_path, withFunctionNamespaceFilterError(), withFunctionLog(), withFunctionCompileTest()); filter != nil {
-			group.AddChild(
-				&flow.LeafNode{
-					Filter: filter,
-				},
-			)
+
+		filterJqPath := fmt.Sprintf("%s/%s/%s", metricsDir, namespace.Name, "filter.jq")
+		// Load the jq filter
+		if filter := loadJq(filterJqPath, withFunctionNamespaceFilterError(), withFunctionLog(), withFunctionCompileTest()); filter != nil {
+			group.AddChild(&flow.LeafNode{
+				Filter: filter,
+			})
 		}
 	}
 
