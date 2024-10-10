@@ -14,9 +14,9 @@ type Event struct {
 }
 
 type Namespace struct {
-	Name    string                 `json:"namespace" yaml:"namespace"`
-	Group   string                 `json:"group" yaml:"group"`
-	Metrics map[string]prom.Metric `json:"metrics" yaml:"metrics"`
+	Name    string                  `json:"namespace" yaml:"namespace"`
+	Group   string                  `json:"group" yaml:"group"`
+	Metrics map[string]*prom.Metric `json:"metrics" yaml:"metrics"`
 }
 
 /*
@@ -29,6 +29,11 @@ func NewNamespace(buf []byte) *Namespace {
 	if err := yaml.Unmarshal(buf, &namespace); err != nil {
 		logrus.Errorf("NewNamespace: %+v", err)
 		return nil
+	}
+
+	for metricName, metric := range namespace.Metrics {
+		metric.Name = metricName
+		metric.AddPromMetric()
 	}
 
 	if !namespace.validateConfig() {

@@ -1,6 +1,8 @@
 package prom
 
 import (
+	"strconv"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -20,6 +22,7 @@ var MyPromMetrics = &PromMetrics{
 }
 
 type Metric struct {
+	Name    string
 	Help    string    `yaml:"help"`
 	Type    string    `yaml:"type"`
 	Buckets []float64 `yaml:"buckets"`
@@ -28,21 +31,21 @@ type Metric struct {
 	Update     func(string, interface{})
 }
 
-func (metric *Metric) AddPromMetric(metricName string) {
+func (metric *Metric) AddPromMetric() {
 	switch metric.Type {
 	case "counter":
 		var counter *prometheus.CounterVec
-		if _, exists := MyPromMetrics.CounterMetrics[metricName]; !exists {
+		if _, exists := MyPromMetrics.CounterMetrics[metric.Name]; !exists {
 			counter = prometheus.NewCounterVec(
 				prometheus.CounterOpts{
-					Name: metricName,
+					Name: metric.Name,
 					Help: metric.Help,
 				},
 				[]string{"namespace"},
 			)
 			reg.MustRegister(counter)
-			MyPromMetrics.CounterMetrics[metricName] = counter
-			logrus.Infof("registered %v counter metric", metricName)
+			MyPromMetrics.CounterMetrics[metric.Name] = counter
+			logrus.Infof("registered %v counter metric", metric.Name)
 		}
 
 		metric.PromMetric = counter
@@ -50,17 +53,17 @@ func (metric *Metric) AddPromMetric(metricName string) {
 
 	case "gauge":
 		var gauge *prometheus.GaugeVec
-		if _, exists := MyPromMetrics.GaugeMetrics[metricName]; !exists {
+		if _, exists := MyPromMetrics.GaugeMetrics[metric.Name]; !exists {
 			gauge = prometheus.NewGaugeVec(
 				prometheus.GaugeOpts{
-					Name: metricName,
+					Name: metric.Name,
 					Help: metric.Help,
 				},
 				[]string{"namespace"},
 			)
 			reg.MustRegister(gauge)
-			MyPromMetrics.GaugeMetrics[metricName] = gauge
-			logrus.Infof("registered %v gauge metric", metricName)
+			MyPromMetrics.GaugeMetrics[metric.Name] = gauge
+			logrus.Infof("registered %v gauge metric", metric.Name)
 		}
 
 		metric.PromMetric = gauge
@@ -68,18 +71,18 @@ func (metric *Metric) AddPromMetric(metricName string) {
 
 	case "histogram":
 		var histogram *prometheus.HistogramVec
-		if _, exists := MyPromMetrics.HistogramMetrics[metricName]; !exists {
+		if _, exists := MyPromMetrics.HistogramMetrics[metric.Name]; !exists {
 			histogram = prometheus.NewHistogramVec(
 				prometheus.HistogramOpts{
-					Name:    metricName,
+					Name:    metric.Name,
 					Help:    metric.Help,
 					Buckets: metric.Buckets,
 				},
 				[]string{"namespace"},
 			)
 			reg.MustRegister(histogram)
-			MyPromMetrics.HistogramMetrics[metricName] = histogram
-			logrus.Infof("registered %v histogram metric", metricName)
+			MyPromMetrics.HistogramMetrics[metric.Name] = histogram
+			logrus.Infof("registered %v histogram metric", metric.Name)
 		}
 
 		metric.PromMetric = histogram
@@ -87,17 +90,17 @@ func (metric *Metric) AddPromMetric(metricName string) {
 
 	case "summary":
 		var summary *prometheus.SummaryVec
-		if _, exists := MyPromMetrics.SummaryMetrics[metricName]; !exists {
+		if _, exists := MyPromMetrics.SummaryMetrics[metric.Name]; !exists {
 			summary = prometheus.NewSummaryVec(
 				prometheus.SummaryOpts{
-					Name: metricName,
+					Name: metric.Name,
 					Help: metric.Help,
 				},
 				[]string{"namespace"},
 			)
 			reg.MustRegister(summary)
-			MyPromMetrics.SummaryMetrics[metricName] = summary
-			logrus.Infof("registered %v summary metric", metricName)
+			MyPromMetrics.SummaryMetrics[metric.Name] = summary
+			logrus.Infof("registered %v summary metric", metric.Name)
 		}
 
 		metric.PromMetric = summary
@@ -108,18 +111,22 @@ func (metric *Metric) AddPromMetric(metricName string) {
 	}
 }
 
-func (metric *Metric) updateCounter(namespaceName string, _ interface{}) {
-	metric.PromMetric.(*prometheus.CounterVec).With(prometheus.Labels{"namespace": namespaceName}).Inc()
+func (metric *Metric) updateCounter(namespaceName string, value interface{}) {
+	value, _ = strconv.ParseFloat(value.(string), 64)
+	metric.PromMetric.(*prometheus.CounterVec).With(prometheus.Labels{"namespace": namespaceName}).Add(value.(float64))
 }
 
 func (metric *Metric) updateGauge(namespaceName string, value interface{}) {
+	value, _ = strconv.ParseFloat(value.(string), 64)
 	metric.PromMetric.(*prometheus.GaugeVec).With(prometheus.Labels{"namespace": namespaceName}).Set(value.(float64))
 }
 
 func (metric *Metric) updateHistogram(namespaceName string, value interface{}) {
+	value, _ = strconv.ParseFloat(value.(string), 64)
 	metric.PromMetric.(*prometheus.HistogramVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(value.(float64))
 }
 
 func (metric *Metric) updateSummary(namespaceName string, value interface{}) {
+	value, _ = strconv.ParseFloat(value.(string), 64)
 	metric.PromMetric.(*prometheus.SummaryVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(value.(float64))
 }

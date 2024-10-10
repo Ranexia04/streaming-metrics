@@ -5,6 +5,11 @@ import time
 from typing import Any, Generator
 import pulsar
 import datetime
+import sys
+
+# MAX_MESSAGE : float = float("inf")
+MAX_MESSAGES_DEFAULT : float = 10
+MAX_MESSAGES : float = float(sys.argv[1]) if len(sys.argv) > 1 else MAX_MESSAGES_DEFAULT
 
 def callback(res, mes_id):
     pass
@@ -12,7 +17,6 @@ def callback(res, mes_id):
 def create_msg(phase: int, code: str, domain: str, start_time: datetime.datetime, cluster: str, host: str) -> bytes:
     msg = '{"phase": %d, "code": "%s", "domain": "%s", "start_time": "%s", "cluster": "%s", "host": "%s"}' % (phase, code, domain, start_time.isoformat(), cluster, host)
     return msg.encode('utf-8')
-
 
 def ERR1() -> bytes:
     return create_msg(1, "ERR1", "XPTO", datetime.datetime.now(datetime.timezone.utc), "sada", "a")
@@ -32,11 +36,10 @@ def ERR5() -> bytes:
 def ERR6() -> bytes:
     return create_msg(1, "ERR6", "XPTA", datetime.datetime.now(datetime.timezone.utc), "adasdas", "dasdsab")
 
-
 def produce() -> Generator[bytes, Any, Any]:
-    #options = (3,4,10,11)
     options = (0,1,2,3,4,5,6)
-    while True:
+    n_messages = 0.0
+    while n_messages < MAX_MESSAGES:
         match random.choice(options):
             case 0:
                 yield ERR1()
@@ -52,8 +55,7 @@ def produce() -> Generator[bytes, Any, Any]:
                 yield ERR5()
             case 6:
                 yield ERR6()
-
-
+        n_messages += 1
 
 def logic(producer: pulsar.Producer) -> None:
     now = datetime.datetime.now(datetime.timezone.utc)

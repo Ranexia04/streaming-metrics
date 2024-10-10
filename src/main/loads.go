@@ -69,19 +69,20 @@ func loadNamespaces(metricsDir string) map[string]*flow.Namespace {
 
 	namespaces := make(map[string]*flow.Namespace)
 	for _, file := range files {
-		if !file.IsDir() {
-			buf, err := os.ReadFile(metricsDir + "/configs/" + file.Name())
-			if err != nil {
-				logrus.Panicf("Unable to read file %s: %+v", file.Name(), err)
-			}
-
-			namespace := flow.NewNamespace(buf)
-			if namespace == nil {
-				logrus.Panicf("Unable to create namespace for file %s", file.Name())
-			} else {
-				namespaces[namespace.Name] = namespace
-			}
+		if file.IsDir() {
+			continue
 		}
+
+		buf, err := os.ReadFile(metricsDir + "/configs/" + file.Name())
+		if err != nil {
+			logrus.Panicf("Unable to read file %s: %+v", file.Name(), err)
+		}
+
+		namespace := flow.NewNamespace(buf)
+		if namespace == nil {
+			logrus.Panicf("Unable to create namespace for file %s", file.Name())
+		}
+		namespaces[namespace.Name] = namespace
 	}
 
 	return namespaces
@@ -89,7 +90,6 @@ func loadNamespaces(metricsDir string) map[string]*flow.Namespace {
 
 func loadFilters(metricsDir string, configs map[string]*flow.Namespace) *flow.FilterRoot {
 	filters := loadGroupFilters(metricsDir)
-	// Iterate over the map using a for range loop
 	for _, namespace := range configs {
 		group := filters.GetGroup(namespace.Group)
 		if group == nil {
@@ -98,7 +98,6 @@ func loadFilters(metricsDir string, configs map[string]*flow.Namespace) *flow.Fi
 		}
 
 		filterJqPath := fmt.Sprintf("%s/%s/%s", metricsDir, namespace.Name, "filter.jq")
-		// Load the jq filter
 		if filter := loadJq(filterJqPath, withFunctionNamespaceFilterError(), withFunctionLog(), withFunctionCompileTest()); filter != nil {
 			group.AddChild(&flow.LeafNode{
 				Filter: filter,
@@ -111,10 +110,11 @@ func loadFilters(metricsDir string, configs map[string]*flow.Namespace) *flow.Fi
 
 func loadGroupFilters(metricsDir string) *flow.FilterRoot {
 	group_filter_jq_path := fmt.Sprintf("%s/%s/%s", metricsDir, "groups", "groups.jq")
-	if group_filter := loadJq(group_filter_jq_path, withFunctionGroupFilterError(), withFunctionCompileTest()); group_filter != nil {
-		return flow.NewFilterTree(group_filter)
+	group_filter := loadJq(group_filter_jq_path, withFunctionGroupFilterError(), withFunctionCompileTest())
+	if group_filter == nil {
+		logrus.Panicf("loadGroupFilters no group filter")
+		return nil
 	}
 
-	logrus.Panicf("loadGroupFilters no group filter")
-	return nil
+	return flow.NewFilterTree(group_filter)
 }

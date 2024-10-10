@@ -93,13 +93,6 @@ func main() {
 
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
-	logrus.Infoln("creating metrics")
-	for _, namespace := range namespaces {
-		for metricName, metric := range namespace.Metrics {
-			metric.AddPromMetric(metricName)
-		}
-	}
-
 	// Logic
 	tick := time.NewTicker(time.Second * time.Duration(opt.tickerseconds))
 	for i := 0; i < int(opt.consumerThreads); i++ {
