@@ -94,10 +94,9 @@ func main() {
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
 	logrus.Infoln("creating metrics")
-	for namespaceName, namespace := range namespaces {
+	for _, namespace := range namespaces {
 		for metricName, metric := range namespace.Metrics {
-			metric.NewPromMetric()
-			// prom.AddMetric(namespaceName, metricName, metric)
+			metric.AddPromMetric(metricName)
 		}
 	}
 

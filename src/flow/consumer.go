@@ -131,7 +131,7 @@ func updateMetrics(namespace Namespace, event Event) {
 			continue
 		}
 
-		metric.UpdateMetric(namespace.Name, eventMetric)
+		metric.Update(namespace.Name, eventMetric)
 	}
 }
 
