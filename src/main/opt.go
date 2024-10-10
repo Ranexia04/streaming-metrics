@@ -18,9 +18,9 @@ type opt struct {
 
 	metricsDir string
 
-	pprofon       bool
-	pprofdir      string
-	pprofduration uint
+	pprofOn       bool
+	pprofDir      string
+	pprofDuration uint
 
 	prometheusPort                uint
 	activateObserveProcessingTime bool
@@ -44,9 +44,9 @@ func loadArgs() opt {
 
 	flag.StringVar(&opt.metricsDir, "metrics_dir", "./metrics", "Directory of all the jq metrics files")
 
-	flag.BoolVar(&opt.pprofon, "pprof_on", false, "Profoling on?")
-	flag.StringVar(&opt.pprofdir, "pprof_dir", "./pprof", "Directory for pprof file")
-	flag.UintVar(&opt.pprofduration, "pprof_duration", 60*2, "Number of seconds to run pprof")
+	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profoling on?")
+	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")
+	flag.UintVar(&opt.pprofDuration, "pprof_duration", 60*2, "Number of seconds to run pprof")
 
 	flag.UintVar(&opt.prometheusPort, "prometheus_port", 7700, "Prometheous port")
 	flag.BoolVar(&opt.activateObserveProcessingTime, "activate_timing_collection", false, "Is the collection by prometheus of processing time on (may hinder perforance!)")

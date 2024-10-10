@@ -98,8 +98,8 @@ func main() {
 		go flow.Consumer(consumeChan, ackChan, namespaces, filters)
 	}
 
-	if opt.pprofon {
-		go activateProfiling(opt.pprofdir, time.Duration(opt.pprofduration)*time.Second)
+	if opt.pprofOn {
+		go activateProfiling(opt.pprofDir, time.Duration(opt.pprofDuration)*time.Second)
 	}
 
 	flow.Acknowledger(consumer, ackChan)

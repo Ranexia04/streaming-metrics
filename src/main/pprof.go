@@ -9,12 +9,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func activateProfiling(pprofdir string, duration time.Duration) {
-	if _, err := os.Stat(pprofdir); os.IsNotExist(err) {
-		os.MkdirAll(pprofdir, 0700)
+func activateProfiling(dir string, duration time.Duration) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		os.MkdirAll(dir, 0700)
 	}
 
-	f, err := os.Create(fmt.Sprintf("%s/%s.pprof", pprofdir, time.Now().Format("2006-01-02_15:04:05")))
+	f, err := os.Create(fmt.Sprintf("%s/%s.pprof", dir, time.Now().Format("2006-01-02_15:04:05")))
 	if err != nil {
 		logrus.Debugf("Failed to open file for profiling: %+v", err)
 		return
