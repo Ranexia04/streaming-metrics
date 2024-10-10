@@ -124,7 +124,7 @@ func (metric *Metric) updateGauge(namespaceName string, value interface{}) {
 		logrus.Errorf("metric %v must be type float64 for gauge metric", metricValue)
 		return
 	}
-	metric.PromMetric.(*prometheus.GaugeVec).With(prometheus.Labels{"namespace": namespaceName}).Set(metricValue / 1000)
+	metric.PromMetric.(*prometheus.GaugeVec).With(prometheus.Labels{"namespace": namespaceName}).Set(metricValue)
 }
 
 func (metric *Metric) updateHistogram(namespaceName string, value interface{}) {
@@ -133,7 +133,7 @@ func (metric *Metric) updateHistogram(namespaceName string, value interface{}) {
 		logrus.Errorf("metric %v must be type float64 for histogram metric", metricValue)
 		return
 	}
-	metric.PromMetric.(*prometheus.HistogramVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(metricValue / 1000)
+	metric.PromMetric.(*prometheus.HistogramVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(metricValue)
 }
 
 func (metric *Metric) updateSummary(namespaceName string, value interface{}) {
@@ -142,5 +142,5 @@ func (metric *Metric) updateSummary(namespaceName string, value interface{}) {
 		logrus.Errorf("metric %v must be type float64 for summary metric", metricValue)
 		return
 	}
-	metric.PromMetric.(*prometheus.SummaryVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(metricValue / 1000)
+	metric.PromMetric.(*prometheus.SummaryVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(metricValue)
 }
