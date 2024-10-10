@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filters *FilterRoot, tick <-chan time.Time) {
+func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filters *FilterRoot) {
 	var nRead float64 = 0
 
 	lastInstant := time.Now()
@@ -20,7 +20,7 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 
 	for {
 		select {
-		case msg := <-consume_chan:
+		case msg := <-consumeChan:
 			nRead += 1
 			lastPublishTime = msg.PublishTime()
 
@@ -42,7 +42,7 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 			}
 			pushDur := time.Since(push_start)
 			prom.MyBasePromMetrics.ObservePushTime(pushDur)
-			ack_chan <- msg
+			ackChan <- msg
 
 			processDur := time.Since(consumeStart)
 			prom.MyBasePromMetrics.ObserveFilterTime(filterDur)

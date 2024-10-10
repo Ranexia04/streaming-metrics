@@ -66,8 +66,8 @@ func main() {
 
 	defer sourceClient.Close()
 
-	consume_chan := make(chan pulsar.ConsumerMessage, 2000)
-	ack_chan := make(chan pulsar.ConsumerMessage, 2000)
+	consumeChan := make(chan pulsar.ConsumerMessage, 2000)
+	ackChan := make(chan pulsar.ConsumerMessage, 2000)
 
 	consumer, err := sourceClient.Subscribe(
 		pulsar.ConsumerOptions{
@@ -76,7 +76,7 @@ func main() {
 			Name:                        opt.pulsarConsumer,
 			Type:                        pulsar.Exclusive,
 			SubscriptionInitialPosition: pulsar.SubscriptionPositionLatest,
-			MessageChannel:              consume_chan,
+			MessageChannel:              consumeChan,
 			ReceiverQueueSize:           2000,
 		},
 	)
@@ -94,14 +94,13 @@ func main() {
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
 	// Logic
-	tick := time.NewTicker(time.Second * time.Duration(opt.tickerSeconds))
 	for i := 0; i < int(opt.consumerThreads); i++ {
-		go flow.Consumer(consume_chan, ack_chan, namespaces, filters, tick.C)
+		go flow.Consumer(consumeChan, ackChan, namespaces, filters)
 	}
 
 	if opt.pprofon {
 		go activateProfiling(opt.pprofdir, time.Duration(opt.pprofduration)*time.Second)
 	}
 
-	flow.Acknowledger(consumer, ack_chan)
+	flow.Acknowledger(consumer, ackChan)
 }

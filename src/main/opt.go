@@ -26,8 +26,6 @@ type opt struct {
 	activateObserveProcessingTime bool
 
 	logLevel string
-
-	tickerSeconds uint
 }
 
 func loadArgs() opt {
@@ -54,8 +52,6 @@ func loadArgs() opt {
 	flag.BoolVar(&opt.activateObserveProcessingTime, "activate_timing_collection", false, "Is the collection by prometheus of processing time on (may hinder perforance!)")
 
 	flag.StringVar(&opt.logLevel, "log_level", "info", "Logging level: panic - fatal - error - warn - info - debug - trace")
-
-	flag.UintVar(&opt.tickerSeconds, "ticker_seconds", 1, "tickerseconds")
 
 	flag.Parse()
 
