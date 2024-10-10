@@ -56,13 +56,13 @@ func newClient(url string, trust_cert_file string, cert_file string, key_file st
 func main() {
 	opt := loadArgs()
 
-	setupLogging(opt.loglevel)
+	setupLogging(opt.logLevel)
 	logrus.Infof("%+v", opt)
 
 	go prom.SetupPrometheus(opt.prometheusPort, opt.activateObserveProcessingTime)
 
 	// Clients
-	sourceClient := newClient(opt.sourcePulsar, opt.sourceTrustCerts, opt.sourceCertFile, opt.sourceKeyFile, opt.sourceAllowInsecureConnection)
+	sourceClient := newClient(opt.pulsarUrl, opt.pulsarTrustCertsFile, opt.pulsarCertFile, opt.pulsarKeyFile, opt.pulsarAllowInsecureConnection)
 
 	defer sourceClient.Close()
 
@@ -71,9 +71,9 @@ func main() {
 
 	consumer, err := sourceClient.Subscribe(
 		pulsar.ConsumerOptions{
-			Topics:                      strings.Split(opt.sourceTopic, ";"),
-			SubscriptionName:            opt.sourceSubscription,
-			Name:                        opt.sourceName,
+			Topics:                      strings.Split(opt.pulsarTopic, ";"),
+			SubscriptionName:            opt.pulsarSubscription,
+			Name:                        opt.pulsarConsumer,
 			Type:                        pulsar.Exclusive,
 			SubscriptionInitialPosition: pulsar.SubscriptionPositionLatest,
 			MessageChannel:              consume_chan,
@@ -94,7 +94,7 @@ func main() {
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
 	// Logic
-	tick := time.NewTicker(time.Second * time.Duration(opt.tickerseconds))
+	tick := time.NewTicker(time.Second * time.Duration(opt.tickerSeconds))
 	for i := 0; i < int(opt.consumerThreads); i++ {
 		go flow.Consumer(consume_chan, ack_chan, namespaces, filters, tick.C)
 	}
