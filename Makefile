@@ -1,6 +1,6 @@
-container_name=streaming_metrics
-image_name=streaming_metrics
-image_version=0.0.0
+container_name=streaming-metrics
+image_name=docker.io/xcjsbsx/streaming-metrics
+image_tag=0.0.0
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true
@@ -30,7 +30,7 @@ run_container: build_cache
 	podman run --rm --name ${container_name} --net host \
 		-v `pwd`/metrics/:/app/metrics/:z \
 		--env LOG_LEVEL=debug \
-		${image_name}:${image_version}
+		${image_name}:${image_tag}
 
 # workaround for dockerfile context
 begin_build: end_build
@@ -42,17 +42,17 @@ end_build:
 	rm -rf build/
 
 build: begin_build
-	echo "Building ${image_name}:${image_version} --no-cache"
-	podman build -t ${image_name}:${image_version} . --no-cache
+	echo "Building ${image_name}:${image_tag} --no-cache"
+	podman build -t ${image_name}:${image_tag} . --no-cache
 	make end_build
 
 build_cache: begin_build
-	echo "Building ${image_name}:${image_version} --with-cache"
-	podman build -t ${image_name}:${image_version} .
+	echo "Building ${image_name}:${image_tag} --with-cache"
+	podman build -t ${image_name}:${image_tag} .
 	make end_build
 
 docker_hub: build
-	./push_dockerhub.sh ${image_name} ${image_version}
+	./push_dockerhub.sh ${image_name} ${image_tag}
 
 start_pulsar:
 	podman run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 docker.io/apachepulsar/pulsar:latest bin/pulsar standalone

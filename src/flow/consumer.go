@@ -38,7 +38,6 @@ func Consumer(consume_chan <-chan pulsar.ConsumerMessage, ack_chan chan<- pulsar
 				if !ok {
 					logrus.Errorf("No namespace named: %s", event.namespace)
 				}
-				logrus.Printf("%v", namespace.Name)
 				updateMetrics(*namespace, event)
 			}
 			pushDur := time.Since(push_start)

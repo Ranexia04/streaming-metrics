@@ -1,8 +1,6 @@
 package prom
 
 import (
-	"strconv"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -112,21 +110,37 @@ func (metric *Metric) AddPromMetric() {
 }
 
 func (metric *Metric) updateCounter(namespaceName string, value interface{}) {
-	value, _ = strconv.ParseFloat(value.(string), 64)
-	metric.PromMetric.(*prometheus.CounterVec).With(prometheus.Labels{"namespace": namespaceName}).Add(value.(float64))
+	metricValue, ok := value.(int)
+	if !ok {
+		logrus.Errorf("metric %v must be type int for counter metric", value)
+		return
+	}
+	metric.PromMetric.(*prometheus.CounterVec).With(prometheus.Labels{"namespace": namespaceName}).Add(float64(metricValue))
 }
 
 func (metric *Metric) updateGauge(namespaceName string, value interface{}) {
-	value, _ = strconv.ParseFloat(value.(string), 64)
-	metric.PromMetric.(*prometheus.GaugeVec).With(prometheus.Labels{"namespace": namespaceName}).Set(value.(float64))
+	metricValue, ok := value.(float64)
+	if !ok {
+		logrus.Errorf("metric %v must be type float64 for gauge metric", metricValue)
+		return
+	}
+	metric.PromMetric.(*prometheus.GaugeVec).With(prometheus.Labels{"namespace": namespaceName}).Set(metricValue / 1000)
 }
 
 func (metric *Metric) updateHistogram(namespaceName string, value interface{}) {
-	value, _ = strconv.ParseFloat(value.(string), 64)
-	metric.PromMetric.(*prometheus.HistogramVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(value.(float64))
+	metricValue, ok := value.(float64)
+	if !ok {
+		logrus.Errorf("metric %v must be type float64 for histogram metric", metricValue)
+		return
+	}
+	metric.PromMetric.(*prometheus.HistogramVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(metricValue / 1000)
 }
 
 func (metric *Metric) updateSummary(namespaceName string, value interface{}) {
-	value, _ = strconv.ParseFloat(value.(string), 64)
-	metric.PromMetric.(*prometheus.SummaryVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(value.(float64))
+	metricValue, ok := value.(float64)
+	if !ok {
+		logrus.Errorf("metric %v must be type float64 for summary metric", metricValue)
+		return
+	}
+	metric.PromMetric.(*prometheus.SummaryVec).With(prometheus.Labels{"namespace": namespaceName}).Observe(metricValue / 1000)
 }
