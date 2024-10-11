@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 
 	gojq_extentions "example.com/gojq_extentions/src"
 	"example.com/streaming-metrics/src/flow"
@@ -61,43 +63,52 @@ func loadJq(program_file string, options ...gojq.CompilerOption) *gojq.Code {
 	return compiled_program
 }
 
-func loadNamespaces(metricsDir string) map[string]*flow.Namespace {
-	files, err := os.ReadDir(metricsDir + "/configs/")
-	if err != nil {
-		logrus.Panicf("load_configs unable to open directory %s %+v", metricsDir+"/configs/", err)
-	}
-
-	namespaces := make(map[string]*flow.Namespace)
-	for _, file := range files {
-		if file.IsDir() {
-			continue
+func loadNamespaceFunc(namespaces map[string]*flow.Namespace) fs.WalkDirFunc {
+	return func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
 
-		buf, err := os.ReadFile(metricsDir + "/configs/" + file.Name())
+		if d.IsDir() {
+			return nil
+		}
+
+		buf, err := os.ReadFile(path)
 		if err != nil {
-			logrus.Panicf("Unable to read file %s: %+v", file.Name(), err)
+			logrus.Panicf("Unable to read file %s: %+v", path, err)
 		}
 
 		namespace := flow.NewNamespace(buf)
 		if namespace == nil {
-			logrus.Panicf("Unable to create namespace for file %s", file.Name())
+			logrus.Panicf("Unable to create namespace for file %s", path)
 		}
 		namespaces[namespace.Name] = namespace
+
+		return nil
+	}
+}
+
+func loadNamespaces(namespacesDir string) map[string]*flow.Namespace {
+	namespaces := make(map[string]*flow.Namespace)
+
+	err := filepath.WalkDir(namespacesDir, loadNamespaceFunc(namespaces))
+	if err != nil {
+		logrus.Panicf("Error walking the path %q: %v\n", namespacesDir, err)
 	}
 
 	return namespaces
 }
 
-func loadFilters(metricsDir string, configs map[string]*flow.Namespace) *flow.FilterRoot {
-	filters := loadGroupFilters(metricsDir)
-	for _, namespace := range configs {
+func loadFilters(filtersDir string, groupsDir string, namespaces map[string]*flow.Namespace) *flow.FilterRoot {
+	filters := loadGroupFilters(groupsDir)
+	for _, namespace := range namespaces {
 		group := filters.GetGroup(namespace.Group)
 		if group == nil {
 			group = flow.NewGroupNode(namespace.Group)
 			filters.AddGroup(namespace.Group, group)
 		}
 
-		filterJqPath := fmt.Sprintf("%s/%s/%s", metricsDir, namespace.Name, "filter.jq")
+		filterJqPath := fmt.Sprintf("%s/%s.jq", filtersDir, namespace.Name)
 		if filter := loadJq(filterJqPath, withFunctionNamespaceFilterError(), withFunctionLog(), withFunctionCompileTest()); filter != nil {
 			group.AddChild(&flow.LeafNode{
 				Filter: filter,
@@ -108,8 +119,8 @@ func loadFilters(metricsDir string, configs map[string]*flow.Namespace) *flow.Fi
 	return filters
 }
 
-func loadGroupFilters(metricsDir string) *flow.FilterRoot {
-	group_filter_jq_path := fmt.Sprintf("%s/%s/%s", metricsDir, "groups", "groups.jq")
+func loadGroupFilters(groupsDir string) *flow.FilterRoot {
+	group_filter_jq_path := fmt.Sprintf("%s/%s", groupsDir, "groups.jq")
 	group_filter := loadJq(group_filter_jq_path, withFunctionGroupFilterError(), withFunctionCompileTest())
 	if group_filter == nil {
 		logrus.Panicf("loadGroupFilters no group filter")

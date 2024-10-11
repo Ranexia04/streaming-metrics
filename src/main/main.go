@@ -87,9 +87,9 @@ func main() {
 	defer consumer.Close()
 
 	logrus.Infoln("loading namespaces")
-	namespaces := loadNamespaces(opt.metricsDir)
+	namespaces := loadNamespaces(opt.namespacesDir)
 	logrus.Infoln("loading filters")
-	filters := loadFilters(opt.metricsDir, namespaces)
+	filters := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
 
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 

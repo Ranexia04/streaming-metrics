@@ -16,7 +16,9 @@ type opt struct {
 
 	consumerThreads uint
 
-	metricsDir string
+	namespacesDir string
+	groupsDir     string
+	filtersDir    string
 
 	pprofOn       bool
 	pprofDir      string
@@ -42,7 +44,9 @@ func loadArgs() opt {
 
 	flag.UintVar(&opt.consumerThreads, "consumer_threads", 6, "Number of threads to consume from pulsar")
 
-	flag.StringVar(&opt.metricsDir, "metrics_dir", "./metrics", "Directory of all the jq metrics files")
+	flag.StringVar(&opt.namespacesDir, "namespaces_dir", "./namespaces", "Directory of all the namespace configurations")
+	flag.StringVar(&opt.groupsDir, "groups_dir", "./groups", "Directory of the groups definitions")
+	flag.StringVar(&opt.filtersDir, "filters_dir", "./filters", "Directory of all the jq filter files")
 
 	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profoling on?")
 	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")

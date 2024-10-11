@@ -1,6 +1,6 @@
 container_name=streaming-metrics
 image_name=docker.io/xcjsbsx/streaming-metrics
-image_tag=0.0.1
+image_tag=0.0.2
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true
@@ -28,7 +28,9 @@ test_gojq:
 
 run_container: build_cache
 	podman run --rm --name ${container_name} --net host \
-		-v `pwd`/metrics/:/app/metrics/:z \
+		-v ./namespaces/:/app/namespaces/:z \
+		-v ./groups/:/app/groups/:z \
+		-v ./filters/:/app/filters/:z \
 		--env LOG_LEVEL=debug \
 		${image_name}:${image_tag}
 
