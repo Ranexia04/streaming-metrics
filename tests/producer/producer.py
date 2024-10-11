@@ -8,7 +8,7 @@ import datetime
 import sys
 
 # MAX_MESSAGE : float = float("inf")
-MAX_MESSAGES_DEFAULT : float = 10
+MAX_MESSAGES_DEFAULT : float = float("inf")
 MAX_MESSAGES : float = float(sys.argv[1]) if len(sys.argv) > 1 else MAX_MESSAGES_DEFAULT
 
 def callback(res, mes_id):
