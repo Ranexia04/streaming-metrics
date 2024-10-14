@@ -21,7 +21,7 @@ pprof: build_go
 	./${container_name} --pprof_on=true --log_level=debug
 
 launch_pprof:
-	/home/afonso_sr/go/bin/pprof -http=:8081 pprof/2023*.pprof
+	go tool pprof -http=:8081 ./pprof/*.pprof
 
 test_gojq:
 	./tests/test_gojq.sh
@@ -31,7 +31,10 @@ run_container: build_cache
 		-v ./namespaces/:/app/namespaces/:z \
 		-v ./groups/:/app/groups/:z \
 		-v ./filters/:/app/filters/:z \
+		-v ./pprof/:/app/pprof/:z \
 		--env LOG_LEVEL=debug \
+		--env PPROF_ON=true \
+		--env CONSUMER_THREADS=6 \
 		${image_name}:${image_tag}
 
 # workaround for dockerfile context
@@ -57,14 +60,14 @@ docker_hub: build
 	./push_dockerhub.sh ${image_name} ${image_tag}
 
 start_pulsar:
-	podman run -d --rm --name pulsar -p 6650:6650 -p 8080:8080 docker.io/apachepulsar/pulsar:latest bin/pulsar standalone
-
+	podman run -it -p 6650:6650 -d --name pulsar -p 8080:8080 -p 8000:8000 docker.io/apachepulsar/pulsar:latest bin/pulsar standalone
+#  --volume pulsardata:/pulsar/data:z --volume pulsarconf:/pulsar/conf:z
 clean:
 	rm ${container_name}; \
-	rm -r persistent_data; \
-	rm pprof/2023*; \
-	rm metrics/configs/TEST_*; \
-	rm -r metrics/TEST_*; \
+	rm pprof/*; \
+	rm -r namespaces \
+	rm -r groups \
+	rm -r filters \
 	rm -r gojq_extention
 
 .PHONY: clean start_pulsar podman_hub build_cache build run_container test_gojq launch_pprof pprof build_go run_trace curl main

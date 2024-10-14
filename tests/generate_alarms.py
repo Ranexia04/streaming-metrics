@@ -2,70 +2,99 @@
 
 import os
 import sys
+import random
+
+from jinja2 import Template
+
+def clean():
+    os.system("rm -r ./namespaces")
+    os.system("rm -r ./groups")
+    os.system("rm -r ./filters")
 
 
-def make_clean():
-    os.system("rm metrics/configs/TEST_*")
-    os.system("rm -r metrics/TEST_*")
-    os.system("rm -r metrics/groups/*")
+def create_configs():
+    create_groups()
 
+    for namespace in namespaces:
+        group=random.choice(groups)
+        create_namespace(namespace, group)
+        create_filter(namespace, group)
 
-def create_namespaces(n_namespaces: int):
-    for i in range(n_namespaces):
-        create_namespace(f"TEST_{i:010d}", "XPTO")
+def create_groups():
+    jinja_group_str = Template(group_str)
+    redered_jinja_group_str = jinja_group_str.render(groups=groups)
 
-    os.makedirs(f"metrics/groups", exist_ok=True)
-    with open(f"metrics/groups/groups.jq", mode='w') as cyaml:
-        cyaml.write(group_str())
+    os.makedirs("./groups", exist_ok=True)
+    with open("./groups/groups.jq", mode='w') as cyaml:
+        cyaml.write(redered_jinja_group_str)
 
+def create_namespace(namespace: str, group: str):
+    os.makedirs(f"./namespaces", exist_ok=True)
 
-def create_namespace(name: str, group: str):
-    os.makedirs(f"metrics/configs", exist_ok=True)
-    os.makedirs(f"metrics/{name}", exist_ok=True)
-    with open(f"metrics/configs/{name}.yaml", mode='w') as cyaml:
-        cyaml.write(config(name, group))
-    with open(f"metrics/{name}/filter.jq", mode='w') as fjq:
-        fjq.write(filter_str(name))
+    with open(f"./namespaces/{namespace}.yaml", mode='w') as cyaml:
+        cyaml.write(namespace_str(namespace, group))
 
+def create_filter(namespace: str, group: str):
+    os.makedirs(f"./filters", exist_ok=True)
 
-def config(name: str, group: str) -> str:
-    return f'''
-group: {group}
-namespace: {name}
-'''
+    with open(f"./filters/{namespace}.jq", mode='w') as fjq:
+        fjq.write(filter_str(namespace, group))
 
-
-def group_str() -> str:
-    return f'''
-if .domain == "XPTO" then
-    "XPTO"
+group_str = '''
+if .domain == "{{ groups[0] }}" then 
+    "{{ groups[0] }}"
+{%- for group in groups[1:] %}
+elif .domain == "{{ group }}" then 
+    "{{ group }}"
+{%- endfor %}
 else
-    filter_error("ola")
+    filter_error("Not in any groups")
 end
 '''
 
-
-def filter_str(name: str) -> str:
+def namespace_str(name: str, group: str) -> str:
     return f'''
-"{name}" as $namespace |
-.start_time as $time |
-1 as $m |
-
-select(.domain == "XPTO" and ( .code | ctest("ERR") )) // filter_error($namespace) |
-log($namespace; .start_time; {{"count": 1, "dummy": "12345678901234567890123456789012345678901234567890"}} | map_values(.) )
+group: {group}
+namespace: {name}
+metrics:
+    request_total_count:
+        type: counter
+        help: counter for request_total_count
+    request_success_count:
+        type: counter
+        help: counter for request_success_count
+    request_tech_error_count:
+        type: counter
+        help: counter for request_tech_error_count
+    request_func_error_count:
+        type: counter
+        help: counter for request_func_error_count
+    request_duration:
+        type: histogram
+        help: histogram for request_duration
 '''
 
+def filter_str(namespace: str, group: str) -> str:
+    return f'''
+select(.domain == "{group}" and ( .code | ctest("STATUS") )) // filter_error("{namespace}") |
+log("{namespace}"; .start_time; {metric_str()} | map_values(.) )
+'''
+
+def metric_str():
+    return '{"request_total_count": (1), "request_success_count": (if .code != "STATUS1" then 1 else 0 end), "request_tech_error_count": (if .code == "STATUS1" then 1 else 0 end), "request_func_error_count": (if .code == "STATUS2" then 1 else 0 end), "request_duration": (12.5 / 1000)}'
 
 if __name__ == "__main__":
-    n_namespaces = 1
+    n_namespaces = 100
+    n_groups = 10
+
+    namespaces = [f"NAMESPACE{i}" for i in range(n_namespaces)]
+    groups = [f"GROUP{i}" for i in range(n_groups)]
 
     if len(sys.argv) == 1:
         print(f"Using default number of metrics: {n_namespaces}")
     else:
         n_namespaces = int(sys.argv[1])
 
-    make_clean()
+    clean()
 
-    create_namespaces(n_namespaces)
-
-    #make_clean()
+    create_configs()

@@ -32,8 +32,8 @@ type Metric struct {
 func (metric *Metric) AddPromMetric() {
 	switch metric.Type {
 	case "counter":
-		var counter *prometheus.CounterVec
-		if _, exists := MyPromMetrics.CounterMetrics[metric.Name]; !exists {
+		counter, exists := MyPromMetrics.CounterMetrics[metric.Name]
+		if !exists {
 			counter = prometheus.NewCounterVec(
 				prometheus.CounterOpts{
 					Name: metric.Name,
@@ -50,8 +50,8 @@ func (metric *Metric) AddPromMetric() {
 		metric.Update = metric.updateCounter
 
 	case "gauge":
-		var gauge *prometheus.GaugeVec
-		if _, exists := MyPromMetrics.GaugeMetrics[metric.Name]; !exists {
+		gauge, exists := MyPromMetrics.GaugeMetrics[metric.Name]
+		if !exists {
 			gauge = prometheus.NewGaugeVec(
 				prometheus.GaugeOpts{
 					Name: metric.Name,
@@ -68,8 +68,8 @@ func (metric *Metric) AddPromMetric() {
 		metric.Update = metric.updateGauge
 
 	case "histogram":
-		var histogram *prometheus.HistogramVec
-		if _, exists := MyPromMetrics.HistogramMetrics[metric.Name]; !exists {
+		histogram, exists := MyPromMetrics.HistogramMetrics[metric.Name]
+		if !exists {
 			histogram = prometheus.NewHistogramVec(
 				prometheus.HistogramOpts{
 					Name:    metric.Name,
@@ -87,8 +87,8 @@ func (metric *Metric) AddPromMetric() {
 		metric.Update = metric.updateHistogram
 
 	case "summary":
-		var summary *prometheus.SummaryVec
-		if _, exists := MyPromMetrics.SummaryMetrics[metric.Name]; !exists {
+		summary, exists := MyPromMetrics.SummaryMetrics[metric.Name]
+		if !exists {
 			summary = prometheus.NewSummaryVec(
 				prometheus.SummaryOpts{
 					Name: metric.Name,
