@@ -84,16 +84,19 @@ def metric_str():
     return '{"request_total_count": (1), "request_success_count": (if .code != "STATUS1" then 1 else 0 end), "request_tech_error_count": (if .code == "STATUS1" then 1 else 0 end), "request_func_error_count": (if .code == "STATUS2" then 1 else 0 end), "request_duration": (12.5 / 1000)}'
 
 if __name__ == "__main__":
-    n_namespaces = 100
-    n_groups = 10
+    try:
+        n_namespaces = int(sys.argv[1])
+    except IndexError:
+        n_namespaces = 100
+
+    try:
+        n_groups = int(sys.argv[2])
+    except IndexError:
+        n_groups = 10
 
     namespaces = [f"NAMESPACE{i}" for i in range(n_namespaces)]
     groups = [f"GROUP{i}" for i in range(n_groups)]
 
-    if len(sys.argv) == 1:
-        print(f"Using default number of metrics: {n_namespaces}")
-    else:
-        n_namespaces = int(sys.argv[1])
 
     clean()
 
