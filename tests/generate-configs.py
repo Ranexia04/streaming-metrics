@@ -41,15 +41,16 @@ def create_filter(namespace: str, group: str):
         fjq.write(filter_str(namespace, group))
 
 group_str = '''
-if .domain == "{{ groups[0] }}" then 
-    "{{ groups[0] }}"
-{%- for group in groups[1:] %}
-elif .domain == "{{ group }}" then 
-    "{{ group }}"
-{%- endfor %}
-else
-    filter_error("Not in any groups")
-end
+. as $message |
+[] as $groups |
+$groups |
+{% for group in groups %}
+if $message.domain == "{{ group }}" then
+    . + ["{{ group }}"]
+end |
+{% endfor %}
+.
+
 '''
 
 def namespace_str(name: str, group: str) -> str:

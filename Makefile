@@ -32,7 +32,7 @@ run_container: build_cache
 		-v ./groups/:/app/groups/:z \
 		-v ./filters/:/app/filters/:z \
 		-v ./pprof/:/app/pprof/:z \
-		--env LOG_LEVEL=debug \
+		--env LOG_LEVEL=info \
 		--env PPROF_ON=false \
 		--env CONSUMER_THREADS=6 \
 		${image_name}:${image_tag}

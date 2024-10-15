@@ -73,45 +73,45 @@ func filterEvents(msg []byte, filterRoot *FilterRoot) []Event {
 	if !ok {
 		return filteredEvents
 	}
-	if _, ok := v.(error); ok {
-		// ignore -- msg is not important for this namespace
-		logrus.Tracef("group_filter next err: %+v", v.(error))
-		return filteredEvents
-	}
 
-	var groupName string
-
-	switch gn := v.(type) {
-	case string:
-		groupName = gn
-
+	var results []interface{}
+	switch r := v.(type) {
+	case []interface{}:
+		results = r
 	default:
-		logrus.Errorf("filter_root did not return string: %+v", v)
-		return filteredEvents
+		logrus.Errorf("Unknown type: %T", r)
 	}
+	logrus.Tracef("groups matched: %+v", results)
 
-	groupFilters, ok := filterRoot.groups[groupName]
-	if !ok {
-		logrus.Errorf("filter_root group does not exist: %s", groupName)
-		return filteredEvents
-	}
+	for _, result := range results {
+		var groupName string
+		switch gn := result.(type) {
+		case string:
+			groupName = gn
+		default:
+			logrus.Errorf("Unknown type for element: %T", gn)
+		}
 
-	for _, filter := range groupFilters.children {
-		event := filterEvent(filter, msgJson)
-		if event == nil {
+		groupFilters, ok := filterRoot.groups[groupName]
+		if !ok {
+			logrus.Errorf("filter_root group does not exist: %s", groupName)
 			continue
 		}
 
-		filteredEvents = append(filteredEvents, *event)
-	}
+		for _, filter := range groupFilters.children {
+			event := filterEventByNamespace(filter, msgJson)
+			if event == nil {
+				continue
+			}
 
-	// go prom.Filter_time.Observe(float64(time.Since(filter_start) / time.Microsecond))
-	// go prom.Number_of_metrics_per_msg.Observe(float64(len(filtered)))
+			filteredEvents = append(filteredEvents, *event)
+		}
+	}
 
 	return filteredEvents
 }
 
-func filterEvent(filter *LeafNode, msgJson any) *Event {
+func filterEventByNamespace(filter *LeafNode, msgJson any) *Event {
 	iter := filter.Filter.Run(msgJson)
 
 	v, ok := iter.Next()
