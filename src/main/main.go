@@ -89,13 +89,13 @@ func main() {
 	logrus.Infoln("loading namespaces")
 	namespaces := loadNamespaces(opt.namespacesDir)
 	logrus.Infoln("loading filters")
-	filters := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
+	filterRoot := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
 
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
 	// Logic
 	for i := 0; i < int(opt.consumerThreads); i++ {
-		go flow.Consumer(consumeChan, ackChan, namespaces, filters)
+		go flow.Consumer(consumeChan, ackChan, namespaces, filterRoot)
 	}
 
 	if opt.pprofOn {

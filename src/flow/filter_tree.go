@@ -11,9 +11,9 @@ type FilterRoot struct {
 	groups      map[string]*GroupNode
 }
 
-func NewFilterTree(group_filter *gojq.Code) *FilterRoot {
+func NewFilterTree(groupFilter *gojq.Code) *FilterRoot {
 	return &FilterRoot{
-		groupFilter: group_filter,
+		groupFilter: groupFilter,
 		groups:      make(map[string]*GroupNode),
 	}
 }

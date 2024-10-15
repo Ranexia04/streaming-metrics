@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filters *FilterRoot) {
+func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filterRoot *FilterRoot) {
 	var nRead float64 = 0
 
 	lastInstant := time.Now()
@@ -26,7 +26,7 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 
 			consumeStart := time.Now()
 
-			events := filterEvents(msg.Payload(), filters)
+			events := filterEvents(msg.Payload(), filterRoot)
 
 			filterDur := time.Since(consumeStart)
 
@@ -57,7 +57,7 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 	}
 }
 
-func filterEvents(msg []byte, filters *FilterRoot) []Event {
+func filterEvents(msg []byte, filterRoot *FilterRoot) []Event {
 	filteredEvents := make([]Event, 0)
 
 	var msgJson any
@@ -67,10 +67,10 @@ func filterEvents(msg []byte, filters *FilterRoot) []Event {
 		return filteredEvents
 	}
 
-	iter := filters.groupFilter.Run(msgJson)
+	iter := filterRoot.groupFilter.Run(msgJson)
 
-	v, ok := iter.Next()
-	if !ok {
+	v, more := iter.Next()
+	if !more {
 		return filteredEvents
 	}
 	if _, ok := v.(error); ok {
@@ -90,36 +90,42 @@ func filterEvents(msg []byte, filters *FilterRoot) []Event {
 		return filteredEvents
 	}
 
-	groupFilters, ok := filters.groups[groupName]
+	groupFilters, ok := filterRoot.groups[groupName]
 	if !ok {
 		logrus.Errorf("filter_root group does not exist: %s", groupName)
 		return filteredEvents
 	}
 
 	for _, filter := range groupFilters.children {
-		iter := filter.Filter.Run(msgJson)
-
-		v, ok := iter.Next()
-		if !ok {
+		event := filterEvent(filter, msgJson)
+		if event == nil {
 			continue
 		}
-		if _, ok := v.(error); ok {
-			// ignore -- msg is not important for this namespace
-			logrus.Tracef("filter next err: %+v", v.(error))
-			continue
-		} else {
-			event := eventFromAny(v)
 
-			if event != nil {
-				filteredEvents = append(filteredEvents, *event)
-			}
-		}
+		filteredEvents = append(filteredEvents, *event)
 	}
 
 	// go prom.Filter_time.Observe(float64(time.Since(filter_start) / time.Microsecond))
 	// go prom.Number_of_metrics_per_msg.Observe(float64(len(filtered)))
 
 	return filteredEvents
+}
+
+func filterEvent(filter *LeafNode, msgJson any) *Event {
+	iter := filter.Filter.Run(msgJson)
+
+	v, ok := iter.Next()
+	if !ok {
+		return nil
+	}
+	if _, ok := v.(error); ok {
+		// ignore -- msg is not important for this namespace
+		logrus.Tracef("filter next err: %+v", v.(error))
+		return nil
+	}
+
+	event := eventFromAny(v)
+	return event
 }
 
 func updateMetrics(namespace Namespace, event Event) {
