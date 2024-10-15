@@ -69,8 +69,8 @@ func filterEvents(msg []byte, filterRoot *FilterRoot) []Event {
 
 	iter := filterRoot.groupFilter.Run(msgJson)
 
-	v, more := iter.Next()
-	if !more {
+	v, ok := iter.Next()
+	if !ok {
 		return filteredEvents
 	}
 	if _, ok := v.(error); ok {
