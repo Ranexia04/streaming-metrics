@@ -23,30 +23,54 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 		case msg := <-consumeChan:
 			nRead += 1
 			lastPublishTime = msg.PublishTime()
-
 			consumeStart := time.Now()
 
-			events := filterEvents(msg.Payload(), filterRoot)
+			var msgJson map[string]any
+			if err := json.Unmarshal(msg.Payload(), &msgJson); err != nil {
+				logrus.Errorf("filter unmarshal msg: %+v", err)
+				ackChan <- msg
+				continue
+			}
+
+			hostnameAny, ok := msgJson["hstnm"]
+			if !ok {
+				logrus.Error("No hostname found")
+				ackChan <- msg
+				continue
+			}
+
+			hostname, ok := hostnameAny.(string)
+			if !ok {
+				logrus.Error("Hostname is not a string")
+				ackChan <- msg
+				continue
+			}
+
+			events := filterEvents(msgJson, filterRoot)
 
 			filterDur := time.Since(consumeStart)
+			prom.MyBasePromMetrics.ObserveFilterTime(filterDur)
 
-			push_start := time.Now()
+			pushStart := time.Now()
 			for _, event := range events {
 				prom.MyBasePromMetrics.IncNamespaceFilteredMsg(event.namespace)
 
 				namespace, ok := namespaces[event.namespace]
 				if !ok {
 					logrus.Errorf("No namespace named: %s", event.namespace)
+					continue
 				}
-				updateMetrics(*namespace, event)
+
+				updateMetrics(*namespace, hostname, event)
 			}
-			pushDur := time.Since(push_start)
+
+			pushDur := time.Since(pushStart)
 			prom.MyBasePromMetrics.ObservePushTime(pushDur)
-			ackChan <- msg
 
 			processDur := time.Since(consumeStart)
-			prom.MyBasePromMetrics.ObserveFilterTime(filterDur)
 			prom.MyBasePromMetrics.ObserveProcessingTime(processDur)
+
+			ackChan <- msg
 
 		case <-log_tick.C:
 			since := time.Since(lastInstant)
@@ -57,15 +81,8 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 	}
 }
 
-func filterEvents(msg []byte, filterRoot *FilterRoot) []Event {
+func filterEvents(msgJson map[string]any, filterRoot *FilterRoot) []Event {
 	filteredEvents := make([]Event, 0)
-
-	var msgJson any
-
-	if err := json.Unmarshal(msg, &msgJson); err != nil {
-		logrus.Errorf("filter unmarshal msg: %+v", err)
-		return filteredEvents
-	}
 
 	iter := filterRoot.groupFilter.Run(msgJson)
 
@@ -128,7 +145,7 @@ func filterEventByNamespace(filter *LeafNode, msgJson any) *Event {
 	return event
 }
 
-func updateMetrics(namespace Namespace, event Event) {
+func updateMetrics(namespace Namespace, hostname string, event Event) {
 	for eventMetricName, eventMetric := range event.metrics.(map[string]interface{}) {
 		metric, exists := namespace.Metrics[eventMetricName]
 		if !exists {
@@ -136,7 +153,7 @@ func updateMetrics(namespace Namespace, event Event) {
 			continue
 		}
 
-		metric.Update(namespace.Name, eventMetric)
+		metric.Update(namespace.Name, hostname, eventMetric)
 	}
 }
 

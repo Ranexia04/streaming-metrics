@@ -1,6 +1,6 @@
 container_name=streaming-metrics
 image_name=docker.io/xcjsbsx/streaming-metrics
-image_tag=0.0.2
+image_tag=0.0.3
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true

@@ -2,26 +2,38 @@
 
 import random
 from typing import Any, Generator
-import pulsar
+import json
 import datetime
 import sys
+
+import pulsar
 
 # MAX_MESSAGE : float = float("inf")
 MAX_MESSAGES_DEFAULT : float = float("inf")
 MAX_MESSAGES : float = float(sys.argv[1]) if len(sys.argv) > 1 else MAX_MESSAGES_DEFAULT
 
+
 def callback(res, mes_id):
     pass
 
-def create_msg(code: str, domain: str, start_time: datetime.datetime) -> bytes:
-    msg = '{"code": "%s", "domain": "%s", "start_time": "%s"}' % (code, domain, start_time.isoformat())
+
+def create_msg(code: str, domain: str, start_time: datetime.datetime, hostname: str) -> bytes:
+    msg = {
+        "code": code,
+        "domain": domain,
+        "start_time": start_time.isoformat(),
+        "hstnm": hostname
+    }
+    msg = json.dumps(msg)
     return msg.encode('utf-8')
+
 
 def produce() -> Generator[bytes, Any, Any]:
     n_messages = 0
     while n_messages < MAX_MESSAGES:
-        yield create_msg(random.choice(statuses), random.choice(domains), datetime.datetime.now(datetime.timezone.utc))
+        yield create_msg(random.choice(statuses), random.choice(domains), datetime.datetime.now(datetime.timezone.utc), random.choice(hostnames))
         n_messages += 1
+
 
 def logic(producer: pulsar.Producer) -> None:
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -58,5 +70,8 @@ if __name__=="__main__":
 
     n_statuses: int = 10
     statuses: list[str] = [f"STATUS{i}" for i in range(n_statuses)]
+
+    n_hostnames: int = 4
+    hostnames: list[str] = [f"HOST{i}" for i in range(n_hostnames)]
 
     main()
