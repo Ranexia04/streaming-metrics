@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -53,13 +56,45 @@ func newClient(url string, trust_cert_file string, cert_file string, key_file st
 	return client
 }
 
+var isReady atomic.Value
+
+func readinessHandler(w http.ResponseWriter, r *http.Request) {
+	var logMessage string
+	if isReady.Load() == true {
+		w.WriteHeader(http.StatusOK)
+		logMessage = "app is ready\n"
+	} else {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		logMessage = "app is not ready\n"
+	}
+
+	fmt.Fprint(w, logMessage)
+	logrus.Info(strings.TrimSpace(logMessage))
+}
+
+func setupReadiness() {
+	http.HandleFunc("/ready", readinessHandler)
+}
+
+func startHttp(httpPort uint) {
+	logrus.Infof("exposing metrics at: localhost:%d/metrics", httpPort)
+	logrus.Infof("exposing readiness at: localhost:%d/ready", httpPort)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", httpPort), nil); err != nil {
+		logrus.Panicf("error setting up http server: %+v", err)
+	}
+}
+
 func main() {
+	isReady.Store(false)
+
 	opt := loadArgs()
 
 	setupLogging(opt.logLevel)
 	logrus.Infof("%+v", opt)
 
-	go prom.SetupPrometheus(opt.prometheusPort, opt.activateObserveProcessingTime)
+	prom.SetupPrometheus(opt.activateObserveProcessingTime)
+	setupReadiness()
+	go startHttp(opt.prometheusPort)
 
 	// Clients
 	sourceClient := newClient(opt.pulsarUrl, opt.pulsarTrustCertsFile, opt.pulsarCertFile, opt.pulsarKeyFile, opt.pulsarAllowInsecureConnection)
@@ -102,5 +137,6 @@ func main() {
 		go activateProfiling(opt.pprofDir, time.Duration(opt.pprofDuration)*time.Second)
 	}
 
+	isReady.Store(true)
 	flow.Acknowledger(consumer, ackChan)
 }

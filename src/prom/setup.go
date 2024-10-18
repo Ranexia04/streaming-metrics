@@ -1,14 +1,11 @@
 package prom
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/sirupsen/logrus"
 )
 
 type BasePromMetrics struct {
@@ -113,7 +110,7 @@ var MyBasePromMetrics *BasePromMetrics = &BasePromMetrics{
 
 var reg *prometheus.Registry = prometheus.NewRegistry()
 
-func SetupPrometheus(prometheusPort uint, activateObserveProcessingTime bool) {
+func SetupPrometheus(activateObserveProcessingTime bool) {
 	initBasePromMetricsHandlers(activateObserveProcessingTime)
 	registerBasePromMetrics(activateObserveProcessingTime)
 
@@ -126,9 +123,4 @@ func SetupPrometheus(prometheusPort uint, activateObserveProcessingTime bool) {
 			},
 		),
 	)
-
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", prometheusPort), nil); err != nil {
-		logrus.Panicf("error setting up prometheus: %+v", err)
-	}
-	logrus.Infof("metrics exposed at: localhost:%d/metrics", prometheusPort)
 }
