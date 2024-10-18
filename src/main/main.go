@@ -94,7 +94,7 @@ func main() {
 
 	prom.SetupPrometheus(opt.activateObserveProcessingTime)
 	setupReadiness()
-	go startHttp(opt.prometheusPort)
+	go startHttp(opt.httpPort)
 
 	// Clients
 	sourceClient := newClient(opt.pulsarUrl, opt.pulsarTrustCertsFile, opt.pulsarCertFile, opt.pulsarKeyFile, opt.pulsarAllowInsecureConnection)

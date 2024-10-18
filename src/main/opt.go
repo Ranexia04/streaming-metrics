@@ -24,7 +24,8 @@ type opt struct {
 	pprofDir      string
 	pprofDuration uint
 
-	prometheusPort                uint
+	httpPort uint
+
 	activateObserveProcessingTime bool
 
 	logLevel string
@@ -52,7 +53,8 @@ func loadArgs() opt {
 	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")
 	flag.UintVar(&opt.pprofDuration, "pprof_duration", 60*2, "Number of seconds to run pprof")
 
-	flag.UintVar(&opt.prometheusPort, "prometheus_port", 7700, "Prometheous port")
+	flag.UintVar(&opt.httpPort, "http_port", 7700, "HTTP port")
+
 	flag.BoolVar(&opt.activateObserveProcessingTime, "activate_timing_collection", false, "Is the collection by prometheus of processing time on (may hinder perforance!)")
 
 	flag.StringVar(&opt.logLevel, "log_level", "info", "Logging level: panic - fatal - error - warn - info - debug - trace")
