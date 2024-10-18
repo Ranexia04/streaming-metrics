@@ -49,7 +49,7 @@ func loadArgs() opt {
 	flag.StringVar(&opt.groupsDir, "groups_dir", "./groups", "Directory of the groups definitions")
 	flag.StringVar(&opt.filtersDir, "filters_dir", "./filters", "Directory of all the jq filter files")
 
-	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profoling on?")
+	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profiling on?")
 	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")
 	flag.UintVar(&opt.pprofDuration, "pprof_duration", 60*2, "Number of seconds to run pprof")
 
