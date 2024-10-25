@@ -69,7 +69,6 @@ func readinessHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, logMessage)
-	logrus.Info(strings.TrimSpace(logMessage))
 }
 
 func setupReadiness() {

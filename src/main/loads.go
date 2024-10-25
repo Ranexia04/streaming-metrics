@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -63,37 +62,57 @@ func loadJq(program_file string, options ...gojq.CompilerOption) *gojq.Code {
 	return compiled_program
 }
 
-func loadNamespaceFunc(namespaces map[string]*flow.Namespace) fs.WalkDirFunc {
-	return func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
+func loadNamespaces(namespacesDir string) map[string]*flow.Namespace {
+	namespaces := make(map[string]*flow.Namespace)
+
+	entries, err := os.ReadDir(namespacesDir)
+	if err != nil {
+		logrus.Panicf("failed to read directory %s", namespacesDir)
+	}
+
+	for _, entry := range entries {
+		namespacePath := filepath.Join(namespacesDir, entry.Name())
+
+		if entry.IsDir() {
+			logrus.Infof("ignoring %v directory", namespacePath)
+			continue
 		}
 
-		if d.IsDir() {
-			return nil
+		info, err := entry.Info()
+		if err != nil {
+			logrus.Errorf("failed to get info for %s: %v", namespacePath, err)
+			continue
 		}
 
-		buf, err := os.ReadFile(path)
+		if info.Mode()&os.ModeSymlink != 0 {
+			resolvedPath, err := filepath.EvalSymlinks(namespacePath)
+			if err != nil {
+				logrus.Errorf("failed to resolve symlink for %s: %v", namespacePath, err)
+				continue
+			}
+
+			resolvedInfo, err := os.Lstat(resolvedPath)
+			if err != nil {
+				logrus.Errorf("failed to get info for resolved path %s: %v", resolvedPath, err)
+				continue
+			}
+
+			if resolvedInfo.IsDir() {
+				logrus.Infof("ignoring %v directory", namespacePath)
+				continue
+			}
+		}
+
+		buf, err := os.ReadFile(namespacePath)
 		if err != nil {
-			logrus.Panicf("Unable to read file %s: %+v", path, err)
+			logrus.Panicf("Unable to read file %s: %+v", namespacePath, err)
 		}
 
 		namespace := flow.NewNamespace(buf)
 		if namespace == nil {
-			logrus.Panicf("Unable to create namespace for file %s", path)
+			logrus.Panicf("Unable to create namespace for file %s", namespacePath)
 		}
 		namespaces[namespace.Name] = namespace
-
-		return nil
-	}
-}
-
-func loadNamespaces(namespacesDir string) map[string]*flow.Namespace {
-	namespaces := make(map[string]*flow.Namespace)
-
-	err := filepath.WalkDir(namespacesDir, loadNamespaceFunc(namespaces))
-	if err != nil {
-		logrus.Panicf("Error walking the path %q: %v\n", namespacesDir, err)
 	}
 
 	return namespaces
