@@ -108,7 +108,7 @@ func main() {
 			Topics:                      strings.Split(opt.pulsarTopic, ";"),
 			SubscriptionName:            opt.pulsarSubscription,
 			Name:                        opt.pulsarConsumer,
-			Type:                        pulsar.Exclusive,
+			Type:                        pulsar.Shared,
 			SubscriptionInitialPosition: pulsar.SubscriptionPositionLatest,
 			MessageChannel:              consumeChan,
 			ReceiverQueueSize:           2000,
