@@ -1,4 +1,4 @@
-FROM docker.io/golang:1.22-alpine AS BuildStage
+FROM docker.io/golang:1.23-alpine AS BuildStage
 
 ENV CGO_ENABLED 0
 

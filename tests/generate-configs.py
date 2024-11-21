@@ -17,7 +17,8 @@ def create_configs():
 
     for namespace in namespaces:
         group=random.choice(groups)
-        create_namespace(namespace, group)
+        service=random.choice(services)
+        create_namespace(namespace, group, service)
         create_filter(namespace, group)
 
 def create_groups():
@@ -28,11 +29,11 @@ def create_groups():
     with open("./groups/groups.jq", mode='w') as cyaml:
         cyaml.write(redered_jinja_group_str)
 
-def create_namespace(namespace: str, group: str):
+def create_namespace(namespace: str, group: str, service: str):
     os.makedirs(f"./namespaces", exist_ok=True)
 
     with open(f"./namespaces/{namespace}.yaml", mode='w') as cyaml:
-        cyaml.write(namespace_str(namespace, group))
+        cyaml.write(namespace_str(namespace, group, service))
 
 def create_filter(namespace: str, group: str):
     os.makedirs(f"./filters", exist_ok=True)
@@ -53,8 +54,9 @@ end |
 
 '''
 
-def namespace_str(name: str, group: str) -> str:
+def namespace_str(name: str, group: str, service: str) -> str:
     return f'''
+service: {service}
 group: {group}
 namespace: {name}
 metrics:
@@ -95,9 +97,14 @@ if __name__ == "__main__":
     except IndexError:
         n_groups = 10
 
+    try:
+        n_services = int(sys.argv[3])
+    except IndexError:
+        n_services = 3
+
     namespaces = [f"NAMESPACE{i}" for i in range(n_namespaces)]
     groups = [f"GROUP{i}" for i in range(n_groups)]
-
+    services = [f"SERVICE{i}" for i in range(n_services)]
 
     clean()
 

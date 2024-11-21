@@ -16,6 +16,7 @@ type Event struct {
 type Namespace struct {
 	Name    string                  `json:"namespace" yaml:"namespace"`
 	Group   string                  `json:"group" yaml:"group"`
+	Service string                  `json:"service" yaml:"service"`
 	Metrics map[string]*prom.Metric `json:"metrics" yaml:"metrics"`
 }
 
@@ -45,7 +46,19 @@ func NewNamespace(buf []byte) *Namespace {
 }
 
 func (namespace *Namespace) validateConfig() bool {
-	return len(namespace.Name) > 0
+	if len(namespace.Name) == 0 {
+		return false
+	}
+
+	if len(namespace.Group) == 0 {
+		return false
+	}
+
+	if len(namespace.Service) == 0 {
+		return false
+	}
+
+	return true
 }
 
 func eventFromAny(in any) *Event {

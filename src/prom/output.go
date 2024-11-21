@@ -26,10 +26,11 @@ type Metric struct {
 	Buckets []float64 `yaml:"buckets"`
 
 	PromMetric prometheus.Collector
-	Update     func(string, string, interface{})
+	Update     func(interface{}, prometheus.Labels)
 }
 
 func (metric *Metric) AddPromMetric() {
+	extraLabels := []string{"service", "group", "namespace", "hostname"}
 	switch metric.Type {
 	case "counter":
 		counter, exists := MyPromMetrics.CounterMetrics[metric.Name]
@@ -39,7 +40,7 @@ func (metric *Metric) AddPromMetric() {
 					Name: metric.Name,
 					Help: metric.Help,
 				},
-				[]string{"namespace", "hostname"},
+				extraLabels,
 			)
 			reg.MustRegister(counter)
 			MyPromMetrics.CounterMetrics[metric.Name] = counter
@@ -57,7 +58,7 @@ func (metric *Metric) AddPromMetric() {
 					Name: metric.Name,
 					Help: metric.Help,
 				},
-				[]string{"namespace", "hostname"},
+				extraLabels,
 			)
 			reg.MustRegister(gauge)
 			MyPromMetrics.GaugeMetrics[metric.Name] = gauge
@@ -76,7 +77,7 @@ func (metric *Metric) AddPromMetric() {
 					Help:    metric.Help,
 					Buckets: metric.Buckets,
 				},
-				[]string{"namespace", "hostname"},
+				extraLabels,
 			)
 			reg.MustRegister(histogram)
 			MyPromMetrics.HistogramMetrics[metric.Name] = histogram
@@ -94,7 +95,7 @@ func (metric *Metric) AddPromMetric() {
 					Name: metric.Name,
 					Help: metric.Help,
 				},
-				[]string{"namespace", "hostname"},
+				extraLabels,
 			)
 			reg.MustRegister(summary)
 			MyPromMetrics.SummaryMetrics[metric.Name] = summary
@@ -109,46 +110,42 @@ func (metric *Metric) AddPromMetric() {
 	}
 }
 
-func (metric *Metric) updateCounter(namespaceName string, hostname string, value interface{}) {
+func (metric *Metric) updateCounter(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(int)
 	if !ok {
 		logrus.Errorf("metric %v must be type int for counter metric", value)
 		return
 	}
 
-	promLabels := prometheus.Labels{"namespace": namespaceName, "hostname": hostname}
-	metric.PromMetric.(*prometheus.CounterVec).With(promLabels).Add(float64(metricValue))
+	metric.PromMetric.(*prometheus.CounterVec).With(extraLabels).Add(float64(metricValue))
 }
 
-func (metric *Metric) updateGauge(namespaceName string, hostname string, value interface{}) {
+func (metric *Metric) updateGauge(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(float64)
 	if !ok {
 		logrus.Errorf("metric %v must be type float64 for gauge metric", metricValue)
 		return
 	}
 
-	promLabels := prometheus.Labels{"namespace": namespaceName, "hostname": hostname}
-	metric.PromMetric.(*prometheus.GaugeVec).With(promLabels).Set(metricValue)
+	metric.PromMetric.(*prometheus.GaugeVec).With(extraLabels).Set(metricValue)
 }
 
-func (metric *Metric) updateHistogram(namespaceName string, hostname string, value interface{}) {
+func (metric *Metric) updateHistogram(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(float64)
 	if !ok {
 		logrus.Errorf("metric %v must be type float64 for histogram metric", metricValue)
 		return
 	}
 
-	promLabels := prometheus.Labels{"namespace": namespaceName, "hostname": hostname}
-	metric.PromMetric.(*prometheus.HistogramVec).With(promLabels).Observe(metricValue)
+	metric.PromMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
 }
 
-func (metric *Metric) updateSummary(namespaceName string, hostname string, value interface{}) {
+func (metric *Metric) updateSummary(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(float64)
 	if !ok {
 		logrus.Errorf("metric %v must be type float64 for summary metric", metricValue)
 		return
 	}
 
-	promLabels := prometheus.Labels{"namespace": namespaceName, "hostname": hostname}
-	metric.PromMetric.(*prometheus.SummaryVec).With(promLabels).Observe(metricValue)
+	metric.PromMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
 }

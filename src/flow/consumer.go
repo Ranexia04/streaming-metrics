@@ -7,6 +7,7 @@ import (
 	"example.com/streaming-metrics/src/prom"
 
 	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -153,7 +154,13 @@ func updateMetrics(namespace Namespace, hostname string, event Event) {
 			continue
 		}
 
-		metric.Update(namespace.Name, hostname, eventMetric)
+		extraLabels := prometheus.Labels{
+			"service":   namespace.Service,
+			"group":     namespace.Group,
+			"namespace": namespace.Name,
+			"hostname":  hostname,
+		}
+		metric.Update(eventMetric, extraLabels)
 	}
 }
 

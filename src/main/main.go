@@ -128,11 +128,13 @@ func main() {
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
 	// Logic
+	logrus.Infoln("starting consumer threads")
 	for i := 0; i < int(opt.consumerThreads); i++ {
 		go flow.Consumer(consumeChan, ackChan, namespaces, filterRoot)
 	}
 
 	if opt.pprofOn {
+		logrus.Infoln("starting profiler thread")
 		go activateProfiling(opt.pprofDir, time.Duration(opt.pprofDuration)*time.Second)
 	}
 
