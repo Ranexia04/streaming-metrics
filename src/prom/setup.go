@@ -9,28 +9,34 @@ import (
 )
 
 type BasePromMetrics struct {
-	namespaceCount     prometheus.Counter
-	pulsarProcessedMsg prometheus.Counter
-	filteredMsg        *prometheus.CounterVec
-	filterTime         prometheus.Summary
-	pushTime           prometheus.Summary
-	processTime        prometheus.Summary
+	groupsGauge     prometheus.Gauge
+	namespacesGauge prometheus.Gauge
+	processedMsg    prometheus.Counter
+	filteredMsg     *prometheus.CounterVec
+	filterTime      prometheus.Summary
+	pushTime        prometheus.Summary
+	processTime     prometheus.Summary
 
+	IncNumberGroups         func()
 	SetNumberNamespaces     func(n int)
 	IncProcessedMsg         func()
+	IncNamespaceFilteredMsg func(namespace string)
 	ObserveProcessingTime   func(t time.Duration)
 	ObserveFilterTime       func(t time.Duration)
-	IncNamespaceFilteredMsg func(namespace string)
 	ObservePushTime         func(t time.Duration)
 }
 
 func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
+	MyBasePromMetrics.IncNumberGroups = func() {
+		MyBasePromMetrics.groupsGauge.Inc()
+	}
+
 	MyBasePromMetrics.SetNumberNamespaces = func(n int) {
-		MyBasePromMetrics.namespaceCount.Add(float64(n))
+		MyBasePromMetrics.namespacesGauge.Set(float64(n))
 	}
 
 	MyBasePromMetrics.IncProcessedMsg = func() {
-		MyBasePromMetrics.pulsarProcessedMsg.Inc()
+		MyBasePromMetrics.processedMsg.Inc()
 	}
 
 	MyBasePromMetrics.IncNamespaceFilteredMsg = func(namespace string) {
@@ -55,8 +61,9 @@ func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
 }
 
 func registerBasePromMetrics(activateObserveProcessingTime bool) {
-	reg.MustRegister(MyBasePromMetrics.namespaceCount)
-	reg.MustRegister(MyBasePromMetrics.pulsarProcessedMsg)
+	reg.MustRegister(MyBasePromMetrics.groupsGauge)
+	reg.MustRegister(MyBasePromMetrics.namespacesGauge)
+	reg.MustRegister(MyBasePromMetrics.processedMsg)
 	reg.MustRegister(MyBasePromMetrics.filteredMsg)
 
 	if activateObserveProcessingTime {
@@ -67,13 +74,19 @@ func registerBasePromMetrics(activateObserveProcessingTime bool) {
 }
 
 var MyBasePromMetrics *BasePromMetrics = &BasePromMetrics{
-	namespaceCount: prometheus.NewCounter(
-		prometheus.CounterOpts{
+	groupsGauge: prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "groups",
+			Help: "The total number of groups",
+		},
+	),
+	namespacesGauge: prometheus.NewGauge(
+		prometheus.GaugeOpts{
 			Name: "namespaces",
 			Help: "The total number of namespaces",
 		},
 	),
-	pulsarProcessedMsg: prometheus.NewCounter(
+	processedMsg: prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "processed_messages",
 			Help: "The total number of processed messages from pulsar.",

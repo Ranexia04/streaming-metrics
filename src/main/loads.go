@@ -7,6 +7,7 @@ import (
 
 	gojq_extentions "example.com/gojq_extentions/src"
 	"example.com/streaming-metrics/src/flow"
+	"example.com/streaming-metrics/src/prom"
 
 	"github.com/itchyny/gojq"
 	"github.com/sirupsen/logrus"
@@ -125,6 +126,7 @@ func loadFilters(filtersDir string, groupsDir string, namespaces map[string]*flo
 		if group == nil {
 			group = flow.NewGroupNode(namespace.Group)
 			filters.AddGroup(namespace.Group, group)
+			prom.MyBasePromMetrics.IncNumberGroups()
 		}
 
 		filterJqPath := fmt.Sprintf("%s/%s.jq", filtersDir, namespace.Name)
