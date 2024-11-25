@@ -69,13 +69,13 @@ func registerBasePromMetrics(activateObserveProcessingTime bool) {
 var MyBasePromMetrics *BasePromMetrics = &BasePromMetrics{
 	namespaceCount: prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "namespace_count",
+			Name: "namespaces",
 			Help: "The total number of namespaces",
 		},
 	),
 	pulsarProcessedMsg: prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "pulsar_processed_msg",
+			Name: "processed_messages",
 			Help: "The total number of processed messages from pulsar.",
 		},
 	),
