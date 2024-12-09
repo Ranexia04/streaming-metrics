@@ -20,6 +20,10 @@ type opt struct {
 	groupsDir     string
 	filtersDir    string
 
+	DelaySeconds uint
+	Granularity  int64
+	Cardinality  int64
+
 	pprofOn       bool
 	pprofDir      string
 	pprofDuration uint
@@ -48,6 +52,10 @@ func loadArgs() opt {
 	flag.StringVar(&opt.namespacesDir, "namespaces_dir", "./namespaces", "Directory of all the namespace configurations")
 	flag.StringVar(&opt.groupsDir, "groups_dir", "./groups", "Directory of the groups definitions")
 	flag.StringVar(&opt.filtersDir, "filters_dir", "./filters", "Directory of all the jq filter files")
+
+	flag.UintVar(&opt.DelaySeconds, "delay_seconds", 60*5, "Time delay to correct metrics")
+	flag.Int64Var(&opt.Granularity, "granularity", 15, "Number of seconds that each bucket should hold")
+	flag.Int64Var(&opt.Cardinality, "cardinality", 20, "Number of buckets in window")
 
 	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profiling on?")
 	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")

@@ -30,7 +30,7 @@ type Metric struct {
 }
 
 func (metric *Metric) AddPromMetric() {
-	extraLabels := []string{"service", "group", "namespace", "hostname"}
+	extraLabels := []string{"delay", "service", "group", "namespace", "hostname"}
 	switch metric.Type {
 	case "counter":
 		counter, exists := MyPromMetrics.CounterMetrics[metric.Name]

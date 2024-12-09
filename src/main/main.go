@@ -121,7 +121,7 @@ func main() {
 	defer consumer.Close()
 
 	logrus.Infoln("loading namespaces")
-	namespaces := loadNamespaces(opt.namespacesDir)
+	namespaces := loadNamespaces(opt.namespacesDir, opt.Granularity, opt.Cardinality)
 	logrus.Infoln("loading filters")
 	filterRoot := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
 
@@ -132,6 +132,8 @@ func main() {
 	for i := 0; i < int(opt.consumerThreads); i++ {
 		go flow.Consumer(consumeChan, ackChan, namespaces, filterRoot)
 	}
+
+	go flow.Ticker(opt.Cardinality, namespaces)
 
 	if opt.pprofOn {
 		logrus.Infoln("starting profiler thread")

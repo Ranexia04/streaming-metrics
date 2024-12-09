@@ -16,8 +16,8 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 
 	lastInstant := time.Now()
 	lastPublishTime := time.Unix(0, 0)
-	log_tick := time.NewTicker(time.Minute)
-	defer log_tick.Stop()
+	logTick := time.NewTicker(time.Minute)
+	defer logTick.Stop()
 
 	for {
 		select {
@@ -73,7 +73,7 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 
 			ackChan <- msg
 
-		case <-log_tick.C:
+		case <-logTick.C:
 			since := time.Since(lastInstant)
 			lastInstant = time.Now()
 			logrus.Infof("Read rate: %.3f msg/s; (last pulsar time %v)", nRead/float64(since/time.Second), lastPublishTime)
@@ -155,6 +155,7 @@ func updateMetrics(namespace Namespace, hostname string, event Event) {
 		}
 
 		extraLabels := prometheus.Labels{
+			"delay":     "none",
 			"service":   namespace.Service,
 			"group":     namespace.Group,
 			"namespace": namespace.Name,
