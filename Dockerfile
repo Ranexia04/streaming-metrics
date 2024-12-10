@@ -11,7 +11,7 @@ COPY build/gojq_extentions/ ./../gojq_extentions/
 
 RUN go mod download
 
-COPY src/ ./src/
+COPY ./src/ ./src/
 
 RUN go build -C src/main -o /app/streaming-metrics
 

@@ -22,10 +22,6 @@ type Namespace struct {
 	Store   *store.MemoryStore
 }
 
-/*
- * Namespace
- */
-
 func NewNamespace(buf []byte, granularity int64, cardinality int64) *Namespace {
 	var namespace Namespace
 
@@ -44,7 +40,7 @@ func NewNamespace(buf []byte, granularity int64, cardinality int64) *Namespace {
 		return nil
 	}
 
-	namespace.Store = store.NewMemoryStore(granularity, cardinality)
+	namespace.Store = store.NewMemoryStore(namespace.Metrics, granularity, cardinality)
 	if namespace.Store == nil {
 		logrus.Errorf("NewNamespace %s: unable to create store", namespace.Name)
 		return nil
@@ -76,8 +72,18 @@ func eventFromAny(in any) *Event {
 		time, ok_time := v["time"].(string)
 		metrics, ok_metrics := v["metrics"]
 
-		if !ok_namespace || !ok_time || !ok_metrics {
-			logrus.Errorf("eventFromAny missing field from in map filter - status: namespace(%t) time(%t) metrics(%t)", ok_namespace, ok_time, ok_metrics)
+		if !ok_namespace {
+			logrus.Errorf("eventFromAny missing field from in map filter - status: namespace(%t)", ok_namespace)
+			return nil
+		}
+
+		if !ok_time {
+			logrus.Errorf("eventFromAny missing field from in map filter - status: time(%t)", ok_time)
+			return nil
+		}
+
+		if !ok_metrics {
+			logrus.Errorf("eventFromAny missing field from in map filter - status: metrics(%t)", ok_metrics)
 			return nil
 		}
 

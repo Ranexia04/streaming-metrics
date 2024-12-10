@@ -1,10 +1,8 @@
 package store
 
 import (
-	"encoding/json"
+	"fmt"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type TimeRange struct {
@@ -16,13 +14,17 @@ func (tr TimeRange) Contains(t time.Time) bool {
 	return !t.Before(tr.Start) && !t.After(tr.End)
 }
 
+func (tr *TimeRange) String() string {
+	return fmt.Sprintf("Time Start: %s\nTime End: %s", tr.Start, tr.End)
+}
+
 type Bucket struct {
 	TimeRange TimeRange
 	Data      interface{}
 }
 
-func NewBucket(beginTime time.Time, duration time.Duration) Bucket {
-	return Bucket{
+func NewBucket(beginTime time.Time, duration time.Duration) *Bucket {
+	return &Bucket{
 		TimeRange: TimeRange{
 			Start: beginTime,
 			End:   beginTime.Add(duration),
@@ -35,32 +37,10 @@ func (bucket *Bucket) Push(metric any) {
 	// TODO
 }
 
-// TODO improve the deepcopy mecanism
-func (bucket *Bucket) getRepresentation() any {
-	// bucket.mutex.Lock()
-	bucket_bytes, err := json.Marshal(bucket)
-	// bucket.mutex.Unlock()
-
-	if err != nil {
-		logrus.Errorf("gojq_bucket marshal: %+v", err)
-		return nil
-	}
-
-	bucket_rep := make(map[string]any)
-
-	if err := json.Unmarshal(bucket_bytes, &bucket_rep); err != nil {
-		logrus.Errorf("gojq_bucket unmarshal: %+v", err)
-		return nil
-
-	}
-
-	return bucket_rep["state"]
-}
-
 func (bucket *Bucket) updateMetrics() {
-
+	// TODO
 }
 
-func (bucket *Bucket) clear() {
-	bucket.Data = nil
+func (bucket *Bucket) String() string {
+	return fmt.Sprintf("Time Range:\n%s\nData: %d\n", bucket.TimeRange.String(), bucket.Data)
 }
