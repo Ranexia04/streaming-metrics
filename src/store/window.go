@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var SyncTime time.Time = time.Now()
@@ -14,16 +16,18 @@ type Window struct {
 	granularity time.Duration
 	cardinality int64
 	buckets     []*Bucket
+	labels      map[string]string
 
 	mutex sync.Mutex
 }
 
-func newWindow(metricType string, cardinality int64, granularity int64) *Window {
+func newWindow(labels map[string]string, metricType string, cardinality int64, granularity int64) *Window {
 	window := &Window{
 		metricType:  metricType,
 		granularity: time.Duration(granularity) * time.Second,
 		cardinality: cardinality,
-		buckets:     make([]*Bucket, 0, cardinality),
+		buckets:     make([]*Bucket, cardinality),
+		labels:      labels,
 	}
 
 	for i := range cardinality {
@@ -45,6 +49,7 @@ func (window *Window) Update(t time.Time, metric any) {
 func (window *Window) update(t time.Time, metric any) {
 	index, err := window.getBucketIndex(t)
 	if err != nil {
+		logrus.Errorf("not in any bucket")
 		return
 	}
 
@@ -52,27 +57,35 @@ func (window *Window) update(t time.Time, metric any) {
 }
 
 func (window *Window) getBucketIndex(t time.Time) (int, error) {
-	timeDiff := t.Sub(window.buckets[0].TimeRange.Start)
+	timeStart := window.buckets[0].TimeRange.Start
+	timeEnd := window.buckets[window.cardinality-1].TimeRange.End
 
-	indexFloat := timeDiff / window.granularity
+	fmt.Println(timeStart, timeEnd, t)
 
-	if indexFloat < 0 || indexFloat > time.Duration(window.cardinality-1) {
+	if t.Before(timeStart) || t.After(timeEnd) {
 		return -1, fmt.Errorf("time did not match any window")
 	}
 
-	return int(indexFloat), nil
+	durationSinceStart := t.Sub(timeStart)
+	bucketIndex := int(durationSinceStart.Seconds() / window.granularity.Seconds())
+
+	logrus.Infof("%d", bucketIndex)
+
+	return bucketIndex, nil
 }
 
-func (window *Window) Tick() {
+func (window *Window) getOldestBucket() *Bucket {
+	return window.buckets[0]
+}
+
+func (window *Window) Roll() {
 	window.mutex.Lock()
 	defer window.mutex.Unlock()
 
-	window.tick()
+	window.roll()
 }
 
-func (window *Window) tick() {
-	oldest := window.buckets[0]
-	oldest.Push()
+func (window *Window) roll() {
 	window.buckets = window.buckets[1:]
 	freshBucket := NewBucket(window.metricType, SyncTime, time.Duration(window.cardinality))
 	window.buckets = append(window.buckets, freshBucket)

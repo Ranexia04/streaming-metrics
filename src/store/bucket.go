@@ -123,10 +123,6 @@ func (bucket *Bucket) String() string {
 	return fmt.Sprintf("Time Range:\n%s\nData: %d\n", bucket.TimeRange.String(), bucket.Data)
 }
 
-func (bucket *Bucket) Push() {
-	// TODO
-}
-
 func initData(metricType string) any {
 	switch metricType {
 	case "counter":

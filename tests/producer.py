@@ -21,7 +21,7 @@ def create_msg(code: str, domain: str, start_time: datetime.datetime, hostname: 
     msg = {
         "code": code,
         "domain": domain,
-        "start_time": start_time.isoformat(),
+        "strtTm": start_time.isoformat(),
         "hstnm": hostname
     }
     msg = json.dumps(msg)

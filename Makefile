@@ -35,6 +35,8 @@ run_container: build_cache
 		--env LOG_LEVEL=info \
 		--env PPROF_ON=false \
 		--env CONSUMER_THREADS=6 \
+		--env GRANULARITY=15 \
+		--env CARDINALITY=2 \
 		${image_name}:${image_tag}
 
 # workaround for dockerfile context

@@ -7,7 +7,6 @@ import (
 	"example.com/streaming-metrics/src/prom"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -142,7 +141,7 @@ func filterEventByNamespace(filter *LeafNode, msgJson any) *Event {
 		return nil
 	}
 
-	event := eventFromAny(v)
+	event := NewEvent(v)
 	return event
 }
 
@@ -154,13 +153,22 @@ func updateMetrics(namespace Namespace, hostname string, event Event) {
 			continue
 		}
 
-		extraLabels := prometheus.Labels{
+		extraLabels := map[string]string{
 			"delay":     "none",
 			"service":   namespace.Service,
 			"group":     namespace.Group,
 			"namespace": namespace.Name,
 			"hostname":  hostname,
 		}
-		metric.Update(eventMetric, extraLabels)
+		metric.Manager.UpdatePromMetric(extraLabels, eventMetric)
+
+		extraLabels = map[string]string{
+			"delay":     "5m",
+			"service":   namespace.Service,
+			"group":     namespace.Group,
+			"namespace": namespace.Name,
+			"hostname":  hostname,
+		}
+		metric.Manager.UpdateWindows(event.time, extraLabels, eventMetric)
 	}
 }

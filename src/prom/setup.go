@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var Reg *prometheus.Registry = prometheus.NewRegistry()
+
 type BasePromMetrics struct {
 	groupsGauge     prometheus.Gauge
 	namespacesGauge prometheus.Gauge
@@ -61,15 +63,15 @@ func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
 }
 
 func registerBasePromMetrics(activateObserveProcessingTime bool) {
-	reg.MustRegister(MyBasePromMetrics.groupsGauge)
-	reg.MustRegister(MyBasePromMetrics.namespacesGauge)
-	reg.MustRegister(MyBasePromMetrics.processedMsg)
-	reg.MustRegister(MyBasePromMetrics.filteredMsg)
+	Reg.MustRegister(MyBasePromMetrics.groupsGauge)
+	Reg.MustRegister(MyBasePromMetrics.namespacesGauge)
+	Reg.MustRegister(MyBasePromMetrics.processedMsg)
+	Reg.MustRegister(MyBasePromMetrics.filteredMsg)
 
 	if activateObserveProcessingTime {
-		reg.MustRegister(MyBasePromMetrics.filterTime)
-		reg.MustRegister(MyBasePromMetrics.pushTime)
-		reg.MustRegister(MyBasePromMetrics.processTime)
+		Reg.MustRegister(MyBasePromMetrics.filterTime)
+		Reg.MustRegister(MyBasePromMetrics.pushTime)
+		Reg.MustRegister(MyBasePromMetrics.processTime)
 	}
 }
 
@@ -121,8 +123,6 @@ var MyBasePromMetrics *BasePromMetrics = &BasePromMetrics{
 	),
 }
 
-var reg *prometheus.Registry = prometheus.NewRegistry()
-
 func SetupPrometheus(activateObserveProcessingTime bool) {
 	initBasePromMetricsHandlers(activateObserveProcessingTime)
 	registerBasePromMetrics(activateObserveProcessingTime)
@@ -130,9 +130,9 @@ func SetupPrometheus(activateObserveProcessingTime bool) {
 	http.Handle(
 		"/metrics",
 		promhttp.HandlerFor(
-			reg,
+			Reg,
 			promhttp.HandlerOpts{
-				Registry: reg,
+				Registry: Reg,
 			},
 		),
 	)
