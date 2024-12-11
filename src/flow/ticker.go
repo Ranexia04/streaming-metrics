@@ -2,6 +2,9 @@ package flow
 
 import (
 	"time"
+
+	"example.com/streaming-metrics/src/prom"
+	"example.com/streaming-metrics/src/store"
 )
 
 func Ticker(cardinality int64, namespaces map[string]*Namespace) {
@@ -10,8 +13,9 @@ func Ticker(cardinality int64, namespaces map[string]*Namespace) {
 
 	for {
 		<-ticker.C
-		for _, namespace := range namespaces {
-			namespace.Store.Tick()
+		store.SyncTime = time.Now()
+		for _, windowManager := range prom.WindowManagers {
+			windowManager.Tick()
 		}
 	}
 }

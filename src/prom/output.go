@@ -1,23 +1,13 @@
 package prom
 
 import (
+	"example.com/streaming-metrics/src/store"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
-type PromMetrics struct {
-	CounterMetrics   map[string]*prometheus.CounterVec
-	GaugeMetrics     map[string]*prometheus.GaugeVec
-	HistogramMetrics map[string]*prometheus.HistogramVec
-	SummaryMetrics   map[string]*prometheus.SummaryVec
-}
-
-var MyPromMetrics = &PromMetrics{
-	CounterMetrics:   make(map[string]*prometheus.CounterVec),
-	GaugeMetrics:     make(map[string]*prometheus.GaugeVec),
-	HistogramMetrics: make(map[string]*prometheus.HistogramVec),
-	SummaryMetrics:   make(map[string]*prometheus.SummaryVec),
-}
+var PromMetrics = make(map[string]prometheus.Collector)
+var WindowManagers = make(map[string]*store.WindowManager)
 
 type Metric struct {
 	Name    string
@@ -25,127 +15,138 @@ type Metric struct {
 	Type    string    `yaml:"type"`
 	Buckets []float64 `yaml:"buckets"`
 
-	PromMetric prometheus.Collector
-	Update     func(interface{}, prometheus.Labels)
+	PromMetric    prometheus.Collector
+	WindowManager *store.WindowManager
+	Update        func(interface{}, prometheus.Labels)
 }
 
-func (metric *Metric) AddPromMetric() {
-	extraLabels := []string{"delay", "service", "group", "namespace", "hostname"}
-	switch metric.Type {
-	case "counter":
-		counter, exists := MyPromMetrics.CounterMetrics[metric.Name]
-		if !exists {
-			counter = prometheus.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: metric.Name,
-					Help: metric.Help,
-				},
-				extraLabels,
-			)
-			reg.MustRegister(counter)
-			MyPromMetrics.CounterMetrics[metric.Name] = counter
-			logrus.Infof("registered %v counter metric", metric.Name)
-		}
+func (m *Metric) Init(granularity int64, cardinality int64) {
+	_, exists := PromMetrics[m.Name]
+	if !exists {
+		PromMetrics[m.Name] = m.createPromMetric()
+	}
 
-		metric.PromMetric = counter
-		metric.Update = metric.updateCounter
+	m.PromMetric = PromMetrics[m.Name]
+
+	m.setUpdateMethod()
+
+	_, exists = WindowManagers[m.Name]
+	if !exists {
+		WindowManagers[m.Name] = store.NewWindowManager(m.Type, granularity, cardinality)
+	}
+
+	m.WindowManager = WindowManagers[m.Name]
+}
+
+func (m *Metric) createPromMetric() prometheus.Collector {
+	extraLabels := []string{"delay", "service", "group", "namespace", "hostname"}
+
+	var metric prometheus.Collector
+	switch m.Type {
+	case "counter":
+		metric = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: m.Name,
+				Help: m.Help,
+			},
+			extraLabels,
+		)
 
 	case "gauge":
-		gauge, exists := MyPromMetrics.GaugeMetrics[metric.Name]
-		if !exists {
-			gauge = prometheus.NewGaugeVec(
-				prometheus.GaugeOpts{
-					Name: metric.Name,
-					Help: metric.Help,
-				},
-				extraLabels,
-			)
-			reg.MustRegister(gauge)
-			MyPromMetrics.GaugeMetrics[metric.Name] = gauge
-			logrus.Infof("registered %v gauge metric", metric.Name)
-		}
-
-		metric.PromMetric = gauge
-		metric.Update = metric.updateGauge
+		metric = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: m.Name,
+				Help: m.Help,
+			},
+			extraLabels,
+		)
 
 	case "histogram":
-		histogram, exists := MyPromMetrics.HistogramMetrics[metric.Name]
-		if !exists {
-			histogram = prometheus.NewHistogramVec(
-				prometheus.HistogramOpts{
-					Name:    metric.Name,
-					Help:    metric.Help,
-					Buckets: metric.Buckets,
-				},
-				extraLabels,
-			)
-			reg.MustRegister(histogram)
-			MyPromMetrics.HistogramMetrics[metric.Name] = histogram
-			logrus.Infof("registered %v histogram metric", metric.Name)
-		}
-
-		metric.PromMetric = histogram
-		metric.Update = metric.updateHistogram
+		metric = prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    m.Name,
+				Help:    m.Help,
+				Buckets: m.Buckets,
+			},
+			extraLabels,
+		)
 
 	case "summary":
-		summary, exists := MyPromMetrics.SummaryMetrics[metric.Name]
-		if !exists {
-			summary = prometheus.NewSummaryVec(
-				prometheus.SummaryOpts{
-					Name: metric.Name,
-					Help: metric.Help,
-				},
-				extraLabels,
-			)
-			reg.MustRegister(summary)
-			MyPromMetrics.SummaryMetrics[metric.Name] = summary
-			logrus.Infof("registered %v summary metric", metric.Name)
-		}
-
-		metric.PromMetric = summary
-		metric.Update = metric.updateSummary
+		metric = prometheus.NewSummaryVec(
+			prometheus.SummaryOpts{
+				Name: m.Name,
+				Help: m.Help,
+			},
+			extraLabels,
+		)
 
 	default:
-		logrus.Panicf("unsupported metric type: %s", metric.Type)
+		logrus.Panicf("unsupported metric type: %s", m.Type)
+	}
+
+	reg.MustRegister(metric)
+
+	return metric
+}
+
+func (m *Metric) setUpdateMethod() {
+	switch m.Type {
+	case "counter":
+		m.Update = m.updateCounter
+
+	case "gauge":
+
+		m.Update = m.updateGauge
+
+	case "histogram":
+
+		m.Update = m.updateHistogram
+
+	case "summary":
+
+		m.Update = m.updateSummary
+
+	default:
+		logrus.Panicf("unsupported metric type: %s", m.Type)
 	}
 }
 
-func (metric *Metric) updateCounter(value interface{}, extraLabels prometheus.Labels) {
+func (m *Metric) updateCounter(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(int)
 	if !ok {
 		logrus.Errorf("metric %v must be type int for counter metric", value)
 		return
 	}
 
-	metric.PromMetric.(*prometheus.CounterVec).With(extraLabels).Add(float64(metricValue))
+	m.PromMetric.(*prometheus.CounterVec).With(extraLabels).Add(float64(metricValue))
 }
 
-func (metric *Metric) updateGauge(value interface{}, extraLabels prometheus.Labels) {
+func (m *Metric) updateGauge(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(float64)
 	if !ok {
 		logrus.Errorf("metric %v must be type float64 for gauge metric", metricValue)
 		return
 	}
 
-	metric.PromMetric.(*prometheus.GaugeVec).With(extraLabels).Set(metricValue)
+	m.PromMetric.(*prometheus.GaugeVec).With(extraLabels).Set(metricValue)
 }
 
-func (metric *Metric) updateHistogram(value interface{}, extraLabels prometheus.Labels) {
+func (m *Metric) updateHistogram(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(float64)
 	if !ok {
 		logrus.Errorf("metric %v must be type float64 for histogram metric", metricValue)
 		return
 	}
 
-	metric.PromMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
+	m.PromMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
 }
 
-func (metric *Metric) updateSummary(value interface{}, extraLabels prometheus.Labels) {
+func (m *Metric) updateSummary(value interface{}, extraLabels prometheus.Labels) {
 	metricValue, ok := value.(float64)
 	if !ok {
 		logrus.Errorf("metric %v must be type float64 for summary metric", metricValue)
 		return
 	}
 
-	metric.PromMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
+	m.PromMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
 }

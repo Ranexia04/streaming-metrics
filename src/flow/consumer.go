@@ -147,7 +147,7 @@ func filterEventByNamespace(filter *LeafNode, msgJson any) *Event {
 }
 
 func updateMetrics(namespace Namespace, hostname string, event Event) {
-	for eventMetricName, eventMetric := range event.metrics.(map[string]interface{}) {
+	for eventMetricName, eventMetric := range event.metrics.(map[string]any) {
 		metric, exists := namespace.Metrics[eventMetricName]
 		if !exists {
 			logrus.Errorf("updateMetrics prometheus metric %v not found", eventMetricName)
@@ -162,30 +162,5 @@ func updateMetrics(namespace Namespace, hostname string, event Event) {
 			"hostname":  hostname,
 		}
 		metric.Update(eventMetric, extraLabels)
-	}
-}
-
-func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessage) {
-	lastInstant := time.Now()
-	tick := time.NewTicker(time.Minute)
-	defer tick.Stop()
-
-	var ack float64 = 0
-	for {
-		select {
-		case msg := <-ack_chan:
-			if err := consumer.Ack(msg); err != nil {
-				logrus.Warnf("consumer.Acks err: %+v", err)
-			}
-			ack++
-
-			prom.MyBasePromMetrics.IncProcessedMsg()
-
-		case <-tick.C:
-			since := time.Since(lastInstant)
-			lastInstant = time.Now()
-			logrus.Infof("Ack rate: %.3f msg/s", ack/float64(since/time.Second))
-			ack = 0
-		}
 	}
 }

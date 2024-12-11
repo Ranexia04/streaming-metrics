@@ -5,7 +5,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"example.com/streaming-metrics/src/prom"
-	"example.com/streaming-metrics/src/store"
 )
 
 type Event struct {
@@ -19,7 +18,6 @@ type Namespace struct {
 	Group   string                  `json:"group" yaml:"group"`
 	Service string                  `json:"service" yaml:"service"`
 	Metrics map[string]*prom.Metric `json:"metrics" yaml:"metrics"`
-	Store   *store.MemoryStore
 }
 
 func NewNamespace(buf []byte, granularity int64, cardinality int64) *Namespace {
@@ -32,17 +30,11 @@ func NewNamespace(buf []byte, granularity int64, cardinality int64) *Namespace {
 
 	for metricName, metric := range namespace.Metrics {
 		metric.Name = metricName
-		metric.AddPromMetric()
+		metric.Init(granularity, cardinality)
 	}
 
 	if !namespace.validateConfig() {
 		logrus.Errorf("NewNamespace: not a valid config")
-		return nil
-	}
-
-	namespace.Store = store.NewMemoryStore(namespace.Metrics, granularity, cardinality)
-	if namespace.Store == nil {
-		logrus.Errorf("NewNamespace %s: unable to create store", namespace.Name)
 		return nil
 	}
 
@@ -96,5 +88,4 @@ func eventFromAny(in any) *Event {
 		logrus.Errorf("eventFromAny filter did not return a map: %+v", in)
 		return nil
 	}
-
 }

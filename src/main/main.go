@@ -127,10 +127,6 @@ func main() {
 
 	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
 
-	for _, namespace := range namespaces {
-		fmt.Println(namespace.Store)
-	}
-
 	// Logic
 	logrus.Infoln("starting consumer threads")
 	for i := 0; i < int(opt.consumerThreads); i++ {

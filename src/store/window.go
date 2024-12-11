@@ -7,7 +7,10 @@ import (
 	"time"
 )
 
+var SyncTime time.Time = time.Now()
+
 type Window struct {
+	metricType  string
 	granularity time.Duration
 	cardinality int64
 	buckets     []*Bucket
@@ -15,59 +18,63 @@ type Window struct {
 	mutex sync.Mutex
 }
 
-func newWindow(cardinality int64, granularity int64) *Window {
+func newWindow(metricType string, cardinality int64, granularity int64) *Window {
 	window := &Window{
+		metricType:  metricType,
 		granularity: time.Duration(granularity) * time.Second,
 		cardinality: cardinality,
-		buckets:     make([]*Bucket, cardinality),
+		buckets:     make([]*Bucket, 0, cardinality),
 	}
 
-	now := time.Now()
 	for i := range cardinality {
-		offset := time.Duration(granularity*(i+1)) * time.Second
-		beginTime := now.Add(-offset)
-		window.buckets[cardinality-i-1] = NewBucket(beginTime, window.granularity)
+		offset := time.Duration(granularity*(i)) * time.Second
+		startTime := SyncTime.Add(-offset)
+		window.buckets[cardinality-i-1] = NewBucket(metricType, startTime, window.granularity)
 	}
 
 	return window
 }
 
-func (window *Window) Push(t time.Time, metric any) {
+func (window *Window) Update(t time.Time, metric any) {
 	window.mutex.Lock()
 	defer window.mutex.Unlock()
 
-	window.push(t, metric)
+	window.update(t, metric)
 }
 
-func (window *Window) push(t time.Time, metric any) {
-	index := window.getBucketIndex(t)
-	window.buckets[index].Push(metric)
-}
-
-func (window *Window) getBucketIndex(t time.Time) int {
-	for i, bucket := range window.buckets {
-		if !bucket.TimeRange.Contains(t) {
-			continue
-		}
-
-		return i
+func (window *Window) update(t time.Time, metric any) {
+	index, err := window.getBucketIndex(t)
+	if err != nil {
+		return
 	}
 
-	return -1
+	window.buckets[index].Update(metric)
 }
 
-func (window *Window) Tick(currentTime time.Time) {
+func (window *Window) getBucketIndex(t time.Time) (int, error) {
+	timeDiff := t.Sub(window.buckets[0].TimeRange.Start)
+
+	indexFloat := timeDiff / window.granularity
+
+	if indexFloat < 0 || indexFloat > time.Duration(window.cardinality-1) {
+		return -1, fmt.Errorf("time did not match any window")
+	}
+
+	return int(indexFloat), nil
+}
+
+func (window *Window) Tick() {
 	window.mutex.Lock()
 	defer window.mutex.Unlock()
 
-	window.tick(currentTime)
+	window.tick()
 }
 
-func (window *Window) tick(currentTime time.Time) {
+func (window *Window) tick() {
 	oldest := window.buckets[0]
-	oldest.updateMetrics()
+	oldest.Push()
 	window.buckets = window.buckets[1:]
-	freshBucket := NewBucket(currentTime.Add(window.granularity), time.Duration(window.cardinality))
+	freshBucket := NewBucket(window.metricType, SyncTime, time.Duration(window.cardinality))
 	window.buckets = append(window.buckets, freshBucket)
 }
 
