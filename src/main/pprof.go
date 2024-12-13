@@ -20,8 +20,6 @@ func activateProfiling(dir string, duration time.Duration) {
 		return
 	}
 
-	time.Sleep(time.Second * 30)
-
 	logrus.Infof("Profiling start!")
 
 	pprof.StartCPUProfile(f)

@@ -65,7 +65,7 @@ def main() -> None:
 
 
 if __name__=="__main__":
-    n_domains: int = 10
+    n_domains: int = 1
     domains: list[str] = [f"GROUP{i}" for i in range(n_domains)]
 
     n_statuses: int = 10

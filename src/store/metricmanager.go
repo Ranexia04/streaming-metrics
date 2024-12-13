@@ -15,12 +15,12 @@ type MetricManager struct {
 	UpdatePromMetric func(prometheus.Labels, any)
 
 	windows     map[string]*Window
-	mutex       sync.Mutex
+	mutex       sync.RWMutex
 	cardinality int64
 	granularity int64
 }
 
-func NewMetricManager(metricType string, promMetric prometheus.Collector, cardinality int64, granularity int64) *MetricManager {
+func NewMetricManager(metricType string, promMetric prometheus.Collector, granularity int64, cardinality int64) *MetricManager {
 	metricManager := &MetricManager{
 		metricType:  metricType,
 		promMetric:  promMetric,
@@ -94,22 +94,22 @@ func (mm *MetricManager) updateSummary(extraLabels prometheus.Labels, value any)
 }
 
 func (mm *MetricManager) UpdateWindows(t time.Time, labels map[string]string, metric any) {
-	mm.mutex.Lock()
-	defer mm.mutex.Unlock()
-
-	mm.updateWindows(t, labels, metric)
-}
-
-func (mm *MetricManager) updateWindows(t time.Time, labels map[string]string, metric any) {
 	key := generateKey(labels)
 
-	existingWindow, exists := mm.windows[key]
+	mm.mutex.RLock()
+	_, exists := mm.windows[key]
+	mm.mutex.RUnlock()
+
 	if !exists {
-		mm.windows[key] = newWindow(labels, mm.metricType, mm.cardinality, mm.granularity)
-		existingWindow = mm.windows[key]
+		mm.mutex.Lock()
+		_, exists = mm.windows[key]
+		if !exists {
+			mm.windows[key] = newWindow(labels, mm.metricType, mm.granularity, mm.cardinality)
+		}
+		mm.mutex.Unlock()
 	}
 
-	existingWindow.Update(t, metric)
+	mm.windows[key].Update(t, metric)
 }
 
 func (mm *MetricManager) Tick() {
@@ -128,9 +128,17 @@ func (mm *MetricManager) tick() {
 }
 
 func generateKey(labels map[string]string) string {
-	var keys []string
-	for k, v := range labels {
-		keys = append(keys, k+"="+v)
-	}
-	return strings.Join(keys, ",")
+	var builder strings.Builder
+	builder.Grow(64)
+	builder.WriteString("delay=")
+	builder.WriteString(labels["delay"])
+	builder.WriteString(",service=")
+	builder.WriteString(labels["service"])
+	builder.WriteString(",group=")
+	builder.WriteString(labels["group"])
+	builder.WriteString(",namespace=")
+	builder.WriteString(labels["namespace"])
+	builder.WriteString(",hostname=")
+	builder.WriteString(labels["hostname"])
+	return builder.String()
 }

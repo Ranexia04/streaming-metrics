@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"example.com/streaming-metrics/src/prom"
 )
 
 var SyncTime time.Time = time.Now()
@@ -18,10 +18,10 @@ type Window struct {
 	buckets     []*Bucket
 	labels      map[string]string
 
-	mutex sync.Mutex
+	mutex sync.RWMutex
 }
 
-func newWindow(labels map[string]string, metricType string, cardinality int64, granularity int64) *Window {
+func newWindow(labels map[string]string, metricType string, granularity int64, cardinality int64) *Window {
 	window := &Window{
 		metricType:  metricType,
 		granularity: time.Duration(granularity) * time.Second,
@@ -40,36 +40,36 @@ func newWindow(labels map[string]string, metricType string, cardinality int64, g
 }
 
 func (window *Window) Update(t time.Time, metric any) {
-	window.mutex.Lock()
-	defer window.mutex.Unlock()
-
-	window.update(t, metric)
-}
-
-func (window *Window) update(t time.Time, metric any) {
+	window.mutex.RLock()
 	index, err := window.getBucketIndex(t)
+	window.mutex.RUnlock()
+
 	if err != nil {
-		logrus.Errorf("not in any bucket")
+		prom.MyBasePromMetrics.IncNamespaceDiscardedMsg(window.labels["namespace"])
 		return
 	}
 
-	window.buckets[index].Update(metric)
+	window.mutex.Lock()
+	bucket := window.buckets[index]
+	window.mutex.Unlock()
+
+	bucket.Update(metric)
 }
 
 func (window *Window) getBucketIndex(t time.Time) (int, error) {
 	timeStart := window.buckets[0].TimeRange.Start
 	timeEnd := window.buckets[window.cardinality-1].TimeRange.End
 
-	fmt.Println(timeStart, timeEnd, t)
+	if t.Before(timeStart) {
+		return -1, fmt.Errorf("msg is too old")
+	}
 
-	if t.Before(timeStart) || t.After(timeEnd) {
-		return -1, fmt.Errorf("time did not match any window")
+	if t.After(timeEnd) {
+		return -1, fmt.Errorf("msg got here early")
 	}
 
 	durationSinceStart := t.Sub(timeStart)
 	bucketIndex := int(durationSinceStart.Seconds() / window.granularity.Seconds())
-
-	logrus.Infof("%d", bucketIndex)
 
 	return bucketIndex, nil
 }
@@ -87,7 +87,7 @@ func (window *Window) Roll() {
 
 func (window *Window) roll() {
 	window.buckets = window.buckets[1:]
-	freshBucket := NewBucket(window.metricType, SyncTime, time.Duration(window.cardinality))
+	freshBucket := NewBucket(window.metricType, SyncTime, window.granularity)
 	window.buckets = append(window.buckets, freshBucket)
 }
 

@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,7 +24,9 @@ func (tr *TimeRange) String() string {
 type Bucket struct {
 	TimeRange TimeRange
 	Data      any
-	Update    func(any)
+	update    func(any)
+
+	mutex sync.Mutex
 }
 
 func NewBucket(metricType string, beginTime time.Time, duration time.Duration) *Bucket {
@@ -50,9 +53,16 @@ func NewBucket(metricType string, beginTime time.Time, duration time.Duration) *
 		return nil
 	}
 
-	bucket.Update = update
+	bucket.update = update
 
 	return bucket
+}
+
+func (bucket *Bucket) Update(metric any) {
+	bucket.mutex.Lock()
+	defer bucket.mutex.Unlock()
+
+	bucket.update(metric)
 }
 
 func (bucket *Bucket) updateCounter(metric any) {

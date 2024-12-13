@@ -33,7 +33,7 @@ run_container: build_cache
 		-v ./filters/:/app/filters/:z \
 		-v ./pprof/:/app/pprof/:z \
 		--env LOG_LEVEL=info \
-		--env PPROF_ON=false \
+		--env PPROF_ON=true \
 		--env CONSUMER_THREADS=6 \
 		--env GRANULARITY=15 \
 		--env CARDINALITY=2 \

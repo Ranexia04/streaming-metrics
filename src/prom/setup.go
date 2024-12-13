@@ -15,17 +15,19 @@ type BasePromMetrics struct {
 	namespacesGauge prometheus.Gauge
 	processedMsg    prometheus.Counter
 	filteredMsg     *prometheus.CounterVec
+	discardedMsg    *prometheus.CounterVec
 	filterTime      prometheus.Summary
 	pushTime        prometheus.Summary
 	processTime     prometheus.Summary
 
-	IncNumberGroups         func()
-	SetNumberNamespaces     func(n int)
-	IncProcessedMsg         func()
-	IncNamespaceFilteredMsg func(namespace string)
-	ObserveProcessingTime   func(t time.Duration)
-	ObserveFilterTime       func(t time.Duration)
-	ObservePushTime         func(t time.Duration)
+	IncNumberGroups          func()
+	SetNumberNamespaces      func(n int)
+	IncProcessedMsg          func()
+	IncNamespaceFilteredMsg  func(namespace string)
+	IncNamespaceDiscardedMsg func(namespace string)
+	ObserveProcessingTime    func(t time.Duration)
+	ObserveFilterTime        func(t time.Duration)
+	ObservePushTime          func(t time.Duration)
 }
 
 func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
@@ -43,6 +45,10 @@ func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
 
 	MyBasePromMetrics.IncNamespaceFilteredMsg = func(namespace string) {
 		MyBasePromMetrics.filteredMsg.With(prometheus.Labels{"namespace": namespace}).Inc()
+	}
+
+	MyBasePromMetrics.IncNamespaceDiscardedMsg = func(namespace string) {
+		MyBasePromMetrics.discardedMsg.With(prometheus.Labels{"namespace": namespace}).Inc()
 	}
 
 	if activateObserveProcessingTime {
@@ -67,6 +73,7 @@ func registerBasePromMetrics(activateObserveProcessingTime bool) {
 	Reg.MustRegister(MyBasePromMetrics.namespacesGauge)
 	Reg.MustRegister(MyBasePromMetrics.processedMsg)
 	Reg.MustRegister(MyBasePromMetrics.filteredMsg)
+	Reg.MustRegister(MyBasePromMetrics.discardedMsg)
 
 	if activateObserveProcessingTime {
 		Reg.MustRegister(MyBasePromMetrics.filterTime)
@@ -98,6 +105,12 @@ var MyBasePromMetrics *BasePromMetrics = &BasePromMetrics{
 		prometheus.CounterOpts{
 			Name: "filtered_messages",
 			Help: "The number of metrics generated per namespace",
+		}, []string{"namespace"},
+	),
+	discardedMsg: prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "discarded_messages",
+			Help: "The number of metrics discarded per namespace",
 		}, []string{"namespace"},
 	),
 	filterTime: prometheus.NewSummary(

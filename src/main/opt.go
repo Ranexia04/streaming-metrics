@@ -59,7 +59,7 @@ func loadArgs() opt {
 
 	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profiling on?")
 	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")
-	flag.UintVar(&opt.pprofDuration, "pprof_duration", 60*2, "Number of seconds to run pprof")
+	flag.UintVar(&opt.pprofDuration, "pprof_duration", 60, "Number of seconds to run pprof")
 
 	flag.UintVar(&opt.httpPort, "http_port", 7700, "HTTP port")
 
