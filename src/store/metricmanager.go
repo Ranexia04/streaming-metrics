@@ -16,7 +16,7 @@ type MetricManager struct {
 	UpdatePromMetric func(prometheus.Labels, any)
 
 	windows     map[string]*Window
-	mutex       sync.RWMutex
+	mutex       sync.Mutex
 	cardinality int64
 	granularity int64
 }
@@ -115,18 +115,11 @@ func (mm *MetricManager) updateSummary(extraLabels prometheus.Labels, value any)
 func (mm *MetricManager) UpdateWindows(t time.Time, labels map[string]string, metric any) {
 	key := generateKey(labels)
 
-	mm.mutex.RLock()
-	_, exists := mm.windows[key]
-	mm.mutex.RUnlock()
-
-	if !exists {
-		mm.mutex.Lock()
-		_, exists = mm.windows[key]
-		if !exists {
-			mm.windows[key] = newWindow(labels, mm.metricType, mm.granularity, mm.cardinality)
-		}
-		mm.mutex.Unlock()
+	mm.mutex.Lock()
+	if _, exists := mm.windows[key]; !exists {
+		mm.windows[key] = newWindow(labels, mm.metricType, mm.granularity, mm.cardinality)
 	}
+	mm.mutex.Unlock()
 
 	mm.windows[key].Update(t, metric)
 }
@@ -135,10 +128,6 @@ func (mm *MetricManager) Tick() {
 	mm.mutex.Lock()
 	defer mm.mutex.Unlock()
 
-	mm.tick()
-}
-
-func (mm *MetricManager) tick() {
 	for _, window := range mm.windows {
 		oldestBucket := window.getOldestBucket()
 		mm.UpdatePromMetric(window.labels, oldestBucket.Data)

@@ -18,7 +18,7 @@ type Window struct {
 	buckets     []*Bucket
 	labels      map[string]string
 
-	mutex sync.RWMutex
+	mutex sync.Mutex
 }
 
 func newWindow(labels map[string]string, metricType string, granularity int64, cardinality int64) *Window {
@@ -40,16 +40,15 @@ func newWindow(labels map[string]string, metricType string, granularity int64, c
 }
 
 func (window *Window) Update(t time.Time, metric any) {
-	window.mutex.RLock()
+	window.mutex.Lock()
 	index, err := window.getBucketIndex(t)
-	window.mutex.RUnlock()
 
 	if err != nil {
 		prom.IncNamespaceDiscardedMsg(window.labels["namespace"])
+		window.mutex.Unlock()
 		return
 	}
 
-	window.mutex.Lock()
 	bucket := window.buckets[index]
 	window.mutex.Unlock()
 
@@ -82,10 +81,6 @@ func (window *Window) Roll() {
 	window.mutex.Lock()
 	defer window.mutex.Unlock()
 
-	window.roll()
-}
-
-func (window *Window) roll() {
 	window.buckets = window.buckets[1:]
 	freshBucket := NewBucket(window.metricType, SyncTime, window.granularity)
 	window.buckets = append(window.buckets, freshBucket)
