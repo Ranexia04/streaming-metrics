@@ -10,6 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var DelayLabel string
+
 func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.ConsumerMessage, namespaces map[string]*Namespace, filterRoot *FilterRoot) {
 	var nRead float64 = 0
 
@@ -49,11 +51,11 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 			events := filterEvents(msgJson, filterRoot)
 
 			filterDur := time.Since(consumeStart)
-			prom.MyBasePromMetrics.ObserveFilterTime(filterDur)
+			prom.ObserveFilterTime(filterDur)
 
 			pushStart := time.Now()
 			for _, event := range events {
-				prom.MyBasePromMetrics.IncNamespaceFilteredMsg(event.namespace)
+				prom.IncNamespaceFilteredMsg(event.namespace)
 
 				namespace, ok := namespaces[event.namespace]
 				if !ok {
@@ -65,10 +67,10 @@ func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.C
 			}
 
 			pushDur := time.Since(pushStart)
-			prom.MyBasePromMetrics.ObservePushTime(pushDur)
+			prom.ObservePushTime(pushDur)
 
 			processDur := time.Since(consumeStart)
-			prom.MyBasePromMetrics.ObserveProcessingTime(processDur)
+			prom.ObserveProcessingTime(processDur)
 
 			ackChan <- msg
 
@@ -164,7 +166,7 @@ func updateMetrics(namespace Namespace, hostname string, event Event) {
 		extraLabels["delay"] = "none"
 		metric.Manager.UpdatePromMetric(extraLabels, eventMetric)
 
-		extraLabels["delay"] = "5m"
+		extraLabels["delay"] = DelayLabel
 		metric.Manager.UpdateWindows(event.time, extraLabels, eventMetric)
 	}
 }

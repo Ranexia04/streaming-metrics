@@ -25,7 +25,6 @@ func withFunctionGroupFilterError() gojq.CompilerOption {
 	})
 }
 
-// def log($namespace; $time; $metric): {"namespace": $namespace, "time": $time, "metrics": $metrics};
 func withFunctionLog() gojq.CompilerOption {
 	return gojq.WithFunction("log", 3, 3, func(in any, args []any) any {
 		return map[string]any{
@@ -126,7 +125,7 @@ func loadFilters(filtersDir string, groupsDir string, namespaces map[string]*flo
 		if group == nil {
 			group = flow.NewGroupNode(namespace.Group)
 			filters.AddGroup(namespace.Group, group)
-			prom.MyBasePromMetrics.IncNumberGroups()
+			prom.IncNumberGroups()
 		}
 
 		filterJqPath := fmt.Sprintf("%s/%s.jq", filtersDir, namespace.Name)
@@ -141,12 +140,12 @@ func loadFilters(filtersDir string, groupsDir string, namespaces map[string]*flo
 }
 
 func loadGroupFilters(groupsDir string) *flow.FilterRoot {
-	group_filter_jq_path := fmt.Sprintf("%s/%s", groupsDir, "groups.jq")
-	group_filter := loadJq(group_filter_jq_path, withFunctionGroupFilterError(), withFunctionCompileTest())
-	if group_filter == nil {
+	groupFilterJqPath := fmt.Sprintf("%s/%s", groupsDir, "groups.jq")
+	groupFilter := loadJq(groupFilterJqPath, withFunctionGroupFilterError(), withFunctionCompileTest())
+	if groupFilter == nil {
 		logrus.Panicf("loadGroupFilters no group filter")
 		return nil
 	}
 
-	return flow.NewFilterTree(group_filter)
+	return flow.NewFilterTree(groupFilter)
 }

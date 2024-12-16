@@ -45,7 +45,7 @@ func (window *Window) Update(t time.Time, metric any) {
 	window.mutex.RUnlock()
 
 	if err != nil {
-		prom.MyBasePromMetrics.IncNamespaceDiscardedMsg(window.labels["namespace"])
+		prom.IncNamespaceDiscardedMsg(window.labels["namespace"])
 		return
 	}
 

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"container/list"
 	"strings"
 	"sync"
 	"time"
@@ -74,23 +75,41 @@ func (mm *MetricManager) updateGauge(extraLabels prometheus.Labels, value any) {
 }
 
 func (mm *MetricManager) updateHistogram(extraLabels prometheus.Labels, value any) {
-	metricValue, ok := value.(float64)
-	if !ok {
-		logrus.Errorf("metric %v must be type float64 for histogram metric", metricValue)
-		return
-	}
+	switch v := value.(type) {
+	case float64:
+		mm.promMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(v)
+	case *list.List:
+		for e := v.Front(); e != nil; e = e.Next() {
+			metricValue, ok := e.Value.(float64)
+			if !ok {
+				logrus.Errorf("list element %v must be type float64 for histogram metric", metricValue)
+				continue
+			}
 
-	mm.promMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
+			mm.promMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
+		}
+	default:
+		logrus.Errorf("metric %v must be type float64 or *list.List for histogram metric", v)
+	}
 }
 
 func (mm *MetricManager) updateSummary(extraLabels prometheus.Labels, value any) {
-	metricValue, ok := value.(float64)
-	if !ok {
-		logrus.Errorf("metric %v must be type float64 for summary metric", metricValue)
-		return
-	}
+	switch v := value.(type) {
+	case float64:
+		mm.promMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(v)
+	case *list.List:
+		for e := v.Front(); e != nil; e = e.Next() {
+			metricValue, ok := e.Value.(float64)
+			if !ok {
+				logrus.Errorf("list element %v must be type float64 for summary metric", metricValue)
+				continue
+			}
 
-	mm.promMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
+			mm.promMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
+		}
+	default:
+		logrus.Errorf("metric %v must be type float64 or *list.List for summary metric", v)
+	}
 }
 
 func (mm *MetricManager) UpdateWindows(t time.Time, labels map[string]string, metric any) {

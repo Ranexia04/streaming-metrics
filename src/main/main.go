@@ -125,7 +125,8 @@ func main() {
 	logrus.Infoln("loading filters")
 	filterRoot := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
 
-	prom.MyBasePromMetrics.SetNumberNamespaces(len(namespaces))
+	prom.SetNumberNamespaces(len(namespaces))
+	flow.DelayLabel = fmt.Sprintf("%ds", opt.Cardinality*opt.Granularity)
 
 	// Logic
 	logrus.Infoln("starting consumer threads")

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"container/list"
 	"fmt"
 	"sync"
 	"time"
@@ -58,6 +59,22 @@ func NewBucket(metricType string, beginTime time.Time, duration time.Duration) *
 	return bucket
 }
 
+func initData(metricType string) any {
+	switch metricType {
+	case "counter":
+		return 0
+	case "gauge":
+		return 0.0
+	case "histogram":
+		return list.New()
+	case "summary":
+		return list.New()
+	default:
+		logrus.Errorf("Metric type %s is not allowed", metricType)
+		return nil
+	}
+}
+
 func (bucket *Bucket) Update(metric any) {
 	bucket.mutex.Lock()
 	defer bucket.mutex.Unlock()
@@ -104,13 +121,13 @@ func (bucket *Bucket) updateHistogram(metric any) {
 		return
 	}
 
-	currentData, ok := bucket.Data.(float64)
+	currentData, ok := bucket.Data.(*list.List)
 	if !ok {
-		logrus.Errorf("bucket.Data %v must be type int for counter metric", bucket.Data)
+		logrus.Errorf("bucket.Data %v must be type *list.List for histogram metric", bucket.Data)
 		return
 	}
 
-	bucket.Data = currentData + metricValue
+	currentData.PushBack(metricValue)
 }
 
 func (bucket *Bucket) updateSummary(metric any) {
@@ -120,31 +137,15 @@ func (bucket *Bucket) updateSummary(metric any) {
 		return
 	}
 
-	currentData, ok := bucket.Data.(float64)
+	currentData, ok := bucket.Data.(*list.List)
 	if !ok {
-		logrus.Errorf("bucket.Data %v must be type int for counter metric", bucket.Data)
+		logrus.Errorf("bucket.Data %v must be type *list.List for summary metric", bucket.Data)
 		return
 	}
 
-	bucket.Data = currentData + metricValue
+	currentData.PushBack(metricValue)
 }
 
 func (bucket *Bucket) String() string {
 	return fmt.Sprintf("Time Range:\n%s\nData: %d\n", bucket.TimeRange.String(), bucket.Data)
-}
-
-func initData(metricType string) any {
-	switch metricType {
-	case "counter":
-		return 0
-	case "gauge":
-		return 0.0
-	case "histogram":
-		return 0.0
-	case "summary":
-		return 0.0
-	default:
-		logrus.Errorf("Metric type %s is not allowed", metricType)
-		return nil
-	}
 }

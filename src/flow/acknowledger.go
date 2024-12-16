@@ -23,7 +23,7 @@ func Acknowledger(consumer pulsar.Consumer, ack_chan <-chan pulsar.ConsumerMessa
 			}
 			ack++
 
-			prom.MyBasePromMetrics.IncProcessedMsg()
+			prom.IncProcessedMsg()
 
 		case <-tick.C:
 			since := time.Since(lastInstant)

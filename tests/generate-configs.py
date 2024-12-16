@@ -80,7 +80,7 @@ metrics:
 def filter_str(namespace: str, group: str) -> str:
     return f'''
 select(.domain == "{group}" and ( .code | ctest("STATUS") )) // filter_error("{namespace}") |
-log("{namespace}"; .start_time; {metric_str()} | map_values(.) )
+log("{namespace}"; .strtTm; {metric_str()} | map_values(.) )
 '''
 
 def metric_str():
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     try:
         n_groups = int(sys.argv[2])
     except IndexError:
-        n_groups = 10
+        n_groups = 15
 
     try:
         n_services = int(sys.argv[3])
