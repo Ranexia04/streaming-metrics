@@ -24,7 +24,7 @@ func (tr *TimeRange) String() string {
 
 type Bucket struct {
 	TimeRange TimeRange
-	Data      any
+	data      any
 	update    func(any)
 
 	mutex sync.Mutex
@@ -36,7 +36,7 @@ func NewBucket(metricType string, beginTime time.Time, duration time.Duration) *
 			Start: beginTime,
 			End:   beginTime.Add(duration),
 		},
-		Data: initData(metricType),
+		data: initData(metricType),
 	}
 
 	var update func(any)
@@ -89,13 +89,13 @@ func (bucket *Bucket) updateCounter(metric any) {
 		return
 	}
 
-	currentData, ok := bucket.Data.(int)
+	currentData, ok := bucket.data.(int)
 	if !ok {
-		logrus.Errorf("bucket.Data %v must be type int for counter metric", bucket.Data)
+		logrus.Errorf("bucket.data %v must be type int for counter metric", bucket.data)
 		return
 	}
 
-	bucket.Data = currentData + metricValue
+	bucket.data = currentData + metricValue
 }
 
 func (bucket *Bucket) updateGauge(metric any) {
@@ -105,13 +105,13 @@ func (bucket *Bucket) updateGauge(metric any) {
 		return
 	}
 
-	currentData, ok := bucket.Data.(float64)
+	currentData, ok := bucket.data.(float64)
 	if !ok {
-		logrus.Errorf("bucket.Data %v must be type int for counter metric", bucket.Data)
+		logrus.Errorf("bucket.data %v must be type int for counter metric", bucket.data)
 		return
 	}
 
-	bucket.Data = currentData + metricValue
+	bucket.data = currentData + metricValue
 }
 
 func (bucket *Bucket) updateHistogram(metric any) {
@@ -121,9 +121,9 @@ func (bucket *Bucket) updateHistogram(metric any) {
 		return
 	}
 
-	currentData, ok := bucket.Data.(*list.List)
+	currentData, ok := bucket.data.(*list.List)
 	if !ok {
-		logrus.Errorf("bucket.Data %v must be type *list.List for histogram metric", bucket.Data)
+		logrus.Errorf("bucket.data %v must be type *list.List for histogram metric", bucket.data)
 		return
 	}
 
@@ -137,9 +137,9 @@ func (bucket *Bucket) updateSummary(metric any) {
 		return
 	}
 
-	currentData, ok := bucket.Data.(*list.List)
+	currentData, ok := bucket.data.(*list.List)
 	if !ok {
-		logrus.Errorf("bucket.Data %v must be type *list.List for summary metric", bucket.Data)
+		logrus.Errorf("bucket.data %v must be type *list.List for summary metric", bucket.data)
 		return
 	}
 
@@ -147,5 +147,5 @@ func (bucket *Bucket) updateSummary(metric any) {
 }
 
 func (bucket *Bucket) String() string {
-	return fmt.Sprintf("Time Range:\n%s\nData: %d\n", bucket.TimeRange.String(), bucket.Data)
+	return fmt.Sprintf("Time Range:\n%s\nData: %d\n", bucket.TimeRange.String(), bucket.data)
 }

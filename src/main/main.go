@@ -129,11 +129,12 @@ func main() {
 	flow.DelayLabel = fmt.Sprintf("%ds", opt.Cardinality*opt.Granularity)
 
 	// Logic
+	go flow.Ticker(opt.Granularity, namespaces)
+
 	logrus.Infoln("starting consumer threads")
 	for i := 0; i < int(opt.consumerThreads); i++ {
 		go flow.Consumer(consumeChan, ackChan, namespaces, filterRoot)
 	}
-	go flow.Ticker(opt.Granularity, namespaces)
 
 	if opt.pprofOn {
 		logrus.Infoln("starting profiler thread")

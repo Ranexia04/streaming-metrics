@@ -129,9 +129,8 @@ func (mm *MetricManager) Tick() {
 	defer mm.mutex.Unlock()
 
 	for _, window := range mm.windows {
-		oldestBucket := window.getOldestBucket()
-		mm.UpdatePromMetric(window.labels, oldestBucket.Data)
-		window.Roll()
+		oldestBucket := window.Roll()
+		mm.UpdatePromMetric(window.labels, oldestBucket.data)
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 	"example.com/streaming-metrics/src/prom"
 )
 
-var SyncTime time.Time = time.Now()
+var SyncTime time.Time
 
 type Window struct {
 	metricType  string
@@ -31,7 +31,7 @@ func newWindow(labels map[string]string, metricType string, granularity int64, c
 	}
 
 	for i := range cardinality {
-		offset := time.Duration(granularity*(i)) * time.Second
+		offset := time.Duration(granularity*i) * time.Second
 		startTime := SyncTime.Add(-offset)
 		window.buckets[cardinality-i-1] = NewBucket(metricType, startTime, window.granularity)
 	}
@@ -73,17 +73,15 @@ func (window *Window) getBucketIndex(t time.Time) (int, error) {
 	return bucketIndex, nil
 }
 
-func (window *Window) getOldestBucket() *Bucket {
-	return window.buckets[0]
-}
-
-func (window *Window) Roll() {
+func (window *Window) Roll() *Bucket {
 	window.mutex.Lock()
 	defer window.mutex.Unlock()
 
+	oldestBucket := window.buckets[0]
 	window.buckets = window.buckets[1:]
 	freshBucket := NewBucket(window.metricType, SyncTime, window.granularity)
 	window.buckets = append(window.buckets, freshBucket)
+	return oldestBucket
 }
 
 func (window *Window) String() string {

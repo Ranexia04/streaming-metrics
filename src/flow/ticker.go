@@ -13,10 +13,10 @@ func Ticker(granularity int64, namespaces map[string]*Namespace) {
 	defer ticker.Stop()
 
 	for {
-		<-ticker.C
 		store.SyncTime = time.Now()
 		for _, metricManager := range metricManagers {
 			metricManager.Tick()
 		}
+		<-ticker.C
 	}
 }
