@@ -13,27 +13,28 @@ var SyncTime time.Time
 
 type Window struct {
 	metricType  string
-	granularity time.Duration
+	granularity int64
 	cardinality int64
+	shift       int64
 	buckets     []*Bucket
 	labels      map[string]string
 
 	mutex sync.Mutex
 }
 
-func newWindow(labels map[string]string, metricType string, granularity int64, cardinality int64) *Window {
+func newWindow(labels map[string]string, metricType string, granularity int64, cardinality int64, shift int64) *Window {
 	window := &Window{
 		metricType:  metricType,
-		granularity: time.Duration(granularity) * time.Second,
+		granularity: granularity,
 		cardinality: cardinality,
+		shift:       shift,
 		buckets:     make([]*Bucket, cardinality),
 		labels:      labels,
 	}
 
 	for i := range cardinality {
-		offset := time.Duration(granularity*i) * time.Second
-		startTime := SyncTime.Add(-offset)
-		window.buckets[cardinality-i-1] = NewBucket(metricType, startTime, window.granularity)
+		offset := -time.Duration(granularity*(i+1-window.shift)) * time.Second
+		window.buckets[cardinality-i-1] = NewBucket(metricType, SyncTime.Add(offset), time.Duration(granularity)*time.Second)
 	}
 
 	return window
@@ -68,7 +69,7 @@ func (window *Window) getBucketIndex(t time.Time) (int, error) {
 	}
 
 	durationSinceStart := t.Sub(timeStart)
-	bucketIndex := int(durationSinceStart.Seconds() / window.granularity.Seconds())
+	bucketIndex := int(durationSinceStart.Seconds() / float64(window.granularity))
 
 	return bucketIndex, nil
 }
@@ -79,7 +80,8 @@ func (window *Window) Roll() *Bucket {
 
 	oldestBucket := window.buckets[0]
 	window.buckets = window.buckets[1:]
-	freshBucket := NewBucket(window.metricType, SyncTime, window.granularity)
+	offset := time.Duration(window.granularity*(window.shift-1)) * time.Second
+	freshBucket := NewBucket(window.metricType, SyncTime.Add(offset), time.Duration(window.granularity)*time.Second)
 	window.buckets = append(window.buckets, freshBucket)
 	return oldestBucket
 }

@@ -19,14 +19,16 @@ type MetricManager struct {
 	mutex       sync.Mutex
 	cardinality int64
 	granularity int64
+	shift       int64
 }
 
-func NewMetricManager(metricType string, promMetric prometheus.Collector, granularity int64, cardinality int64) *MetricManager {
+func NewMetricManager(metricType string, promMetric prometheus.Collector, granularity int64, cardinality int64, shift int64) *MetricManager {
 	metricManager := &MetricManager{
 		metricType:  metricType,
 		promMetric:  promMetric,
 		cardinality: cardinality,
 		granularity: granularity,
+		shift:       shift,
 		windows:     make(map[string]*Window),
 	}
 
@@ -75,40 +77,38 @@ func (mm *MetricManager) updateGauge(extraLabels prometheus.Labels, value any) {
 }
 
 func (mm *MetricManager) updateHistogram(extraLabels prometheus.Labels, value any) {
-	switch v := value.(type) {
-	case float64:
-		mm.promMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(v)
-	case *list.List:
-		for e := v.Front(); e != nil; e = e.Next() {
-			metricValue, ok := e.Value.(float64)
-			if !ok {
-				logrus.Errorf("list element %v must be type float64 for histogram metric", metricValue)
-				continue
-			}
+	v, ok := value.(*list.List)
+	if !ok {
+		logrus.Errorf("metric %v must be type *list.List for histogram metric", v)
+		return
+	}
 
-			mm.promMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
+	for e := v.Front(); e != nil; e = e.Next() {
+		metricValue, ok := e.Value.(float64)
+		if !ok {
+			logrus.Errorf("list element %v must be type float64 for histogram metric", metricValue)
+			continue
 		}
-	default:
-		logrus.Errorf("metric %v must be type float64 or *list.List for histogram metric", v)
+
+		mm.promMetric.(*prometheus.HistogramVec).With(extraLabels).Observe(metricValue)
 	}
 }
 
 func (mm *MetricManager) updateSummary(extraLabels prometheus.Labels, value any) {
-	switch v := value.(type) {
-	case float64:
-		mm.promMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(v)
-	case *list.List:
-		for e := v.Front(); e != nil; e = e.Next() {
-			metricValue, ok := e.Value.(float64)
-			if !ok {
-				logrus.Errorf("list element %v must be type float64 for summary metric", metricValue)
-				continue
-			}
+	v, ok := value.(*list.List)
+	if !ok {
+		logrus.Errorf("metric %v must be type *list.List for summary metric", v)
+		return
+	}
 
-			mm.promMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
+	for e := v.Front(); e != nil; e = e.Next() {
+		metricValue, ok := e.Value.(float64)
+		if !ok {
+			logrus.Errorf("list element %v must be type float64 for summary metric", metricValue)
+			continue
 		}
-	default:
-		logrus.Errorf("metric %v must be type float64 or *list.List for summary metric", v)
+
+		mm.promMetric.(*prometheus.SummaryVec).With(extraLabels).Observe(metricValue)
 	}
 }
 
@@ -117,7 +117,7 @@ func (mm *MetricManager) UpdateWindows(t time.Time, labels map[string]string, me
 
 	mm.mutex.Lock()
 	if _, exists := mm.windows[key]; !exists {
-		mm.windows[key] = newWindow(labels, mm.metricType, mm.granularity, mm.cardinality)
+		mm.windows[key] = newWindow(labels, mm.metricType, mm.granularity, mm.cardinality, mm.shift)
 	}
 	mm.mutex.Unlock()
 

@@ -22,6 +22,7 @@ type opt struct {
 
 	Granularity int64
 	Cardinality int64
+	Shift       int64
 
 	pprofOn       bool
 	pprofDir      string
@@ -54,6 +55,7 @@ func loadArgs() opt {
 
 	flag.Int64Var(&opt.Granularity, "granularity", 15, "Number of seconds that each bucket should hold")
 	flag.Int64Var(&opt.Cardinality, "cardinality", 20, "Number of buckets in window")
+	flag.Int64Var(&opt.Shift, "shift", 1, "Number of buckets to shift to the future")
 
 	flag.BoolVar(&opt.pprofOn, "pprof_on", false, "Profiling on?")
 	flag.StringVar(&opt.pprofDir, "pprof_dir", "./pprof", "Directory for pprof file")

@@ -62,7 +62,7 @@ func loadJq(program_file string, options ...gojq.CompilerOption) *gojq.Code {
 	return compiled_program
 }
 
-func loadNamespaces(namespacesDir string, granularity int64, cardinality int64) map[string]*flow.Namespace {
+func loadNamespaces(namespacesDir string, granularity int64, cardinality int64, shift int64) map[string]*flow.Namespace {
 	namespaces := make(map[string]*flow.Namespace)
 
 	entries, err := os.ReadDir(namespacesDir)
@@ -108,7 +108,7 @@ func loadNamespaces(namespacesDir string, granularity int64, cardinality int64) 
 			logrus.Panicf("Unable to read file %s: %+v", namespacePath, err)
 		}
 
-		namespace := flow.NewNamespace(buf, granularity, cardinality)
+		namespace := flow.NewNamespace(buf, granularity, cardinality, shift)
 		if namespace == nil {
 			logrus.Panicf("Unable to create namespace for file %s", namespacePath)
 		}

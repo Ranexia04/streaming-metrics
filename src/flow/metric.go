@@ -16,12 +16,12 @@ type Metric struct {
 	Manager *store.MetricManager
 }
 
-func (m *Metric) Init(granularity int64, cardinality int64) {
+func (m *Metric) Init(granularity int64, cardinality int64, shift int64) {
 	_, exists := metricManagers[m.Name]
 	if !exists {
 		promMetric := NewPromMetric(m)
 		prom.Reg.MustRegister(promMetric)
-		metricManagers[m.Name] = store.NewMetricManager(m.Type, promMetric, granularity, cardinality)
+		metricManagers[m.Name] = store.NewMetricManager(m.Type, promMetric, granularity, cardinality, shift)
 	}
 
 	m.Manager = metricManagers[m.Name]

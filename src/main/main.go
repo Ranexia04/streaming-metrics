@@ -121,7 +121,7 @@ func main() {
 	defer consumer.Close()
 
 	logrus.Infoln("loading namespaces")
-	namespaces := loadNamespaces(opt.namespacesDir, opt.Granularity, opt.Cardinality)
+	namespaces := loadNamespaces(opt.namespacesDir, opt.Granularity, opt.Cardinality, opt.Shift)
 	logrus.Infoln("loading filters")
 	filterRoot := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
 

@@ -12,7 +12,7 @@ type Namespace struct {
 	Metrics map[string]*Metric `json:"metrics" yaml:"metrics"`
 }
 
-func NewNamespace(buf []byte, granularity int64, cardinality int64) *Namespace {
+func NewNamespace(buf []byte, granularity int64, cardinality int64, shift int64) *Namespace {
 	var namespace Namespace
 
 	if err := yaml.Unmarshal(buf, &namespace); err != nil {
@@ -22,7 +22,7 @@ func NewNamespace(buf []byte, granularity int64, cardinality int64) *Namespace {
 
 	for metricName, metric := range namespace.Metrics {
 		metric.Name = metricName
-		metric.Init(granularity, cardinality)
+		metric.Init(granularity, cardinality, shift)
 	}
 
 	if !namespace.validateConfig() {

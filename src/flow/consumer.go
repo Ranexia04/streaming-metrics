@@ -149,7 +149,7 @@ func filterEventByNamespace(filter *LeafNode, msgJson any) *Event {
 
 func updateMetrics(namespace Namespace, hostname string, event Event) {
 	extraLabels := map[string]string{
-		"delay":     "none",
+		"delay":     DelayLabel,
 		"service":   namespace.Service,
 		"group":     namespace.Group,
 		"namespace": namespace.Name,
@@ -163,10 +163,6 @@ func updateMetrics(namespace Namespace, hostname string, event Event) {
 			continue
 		}
 
-		extraLabels["delay"] = "none"
-		metric.Manager.UpdatePromMetric(extraLabels, eventMetric)
-
-		extraLabels["delay"] = DelayLabel
 		metric.Manager.UpdateWindows(event.time, extraLabels, eventMetric)
 	}
 }
