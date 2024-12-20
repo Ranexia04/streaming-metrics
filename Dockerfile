@@ -7,8 +7,6 @@ WORKDIR /app
 COPY go.mod ./
 COPY go.sum ./
 
-COPY build/gojq_extentions/ ./../gojq_extentions/
-
 RUN go mod download
 
 COPY ./src/ ./src/

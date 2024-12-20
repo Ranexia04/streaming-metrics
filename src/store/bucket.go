@@ -75,11 +75,11 @@ func initData(metricType string) any {
 	}
 }
 
-func (bucket *Bucket) Update(metric any) {
+func (bucket *Bucket) Update(value any) {
 	bucket.mutex.Lock()
 	defer bucket.mutex.Unlock()
 
-	bucket.update(metric)
+	bucket.update(value)
 }
 
 func (bucket *Bucket) updateCounter(metric any) {

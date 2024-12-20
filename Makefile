@@ -1,6 +1,6 @@
 container_name=streaming-metrics
 image_name=docker.io/xcjsbsx/streaming-metrics
-image_tag=0.1.3
+image_tag=0.2.0
 
 main: build_go
 	./${container_name} --log_level=debug --source_allow_insecure_connection=true --dest_allow_insecure_connection=true
@@ -39,27 +39,13 @@ run_container: build_cache
 		--env CARDINALITY=2 \
 		${image_name}:${image_tag}
 
-# workaround for dockerfile context
-begin_build: end_build
-	mkdir -p build/gojq_extentions/
-	cp -r ../gojq_extentions/go.* build/gojq_extentions/
-	cp -r ../gojq_extentions/src build/gojq_extentions/src
-
-end_build:
-	rm -rf build/
-
-build: begin_build
+build:
 	echo "Building ${image_name}:${image_tag} --no-cache"
 	podman build -t ${image_name}:${image_tag} . --no-cache
-	make end_build
 
-build_cache: begin_build
+build_cache:
 	echo "Building ${image_name}:${image_tag} --with-cache"
 	podman build -t ${image_name}:${image_tag} .
-	make end_build
-
-docker_hub: build
-	./push_dockerhub.sh ${image_name} ${image_tag}
 
 start_pulsar:
 	podman run -it -p 6650:6650 -d --name pulsar -p 8080:8080 -p 8000:8000 docker.io/apachepulsar/pulsar:latest bin/pulsar standalone
@@ -67,9 +53,5 @@ start_pulsar:
 clean:
 	rm ${container_name}; \
 	rm pprof/*; \
-	rm -r namespaces \
-	rm -r groups \
-	rm -r filters \
-	rm -r gojq_extention
 
 .PHONY: clean start_pulsar podman_hub build_cache build run_container test_gojq launch_pprof pprof build_go run_trace curl main

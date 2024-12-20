@@ -1,52 +1,42 @@
 package flow
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
 type Event struct {
-	namespace string
-	time      time.Time
-	metrics   any
+	Time     time.Time
+	TimeStr  string `json:"strtTm"`
+	Duration int64  `json:"drtn"`
+
+	Type       string `json:"tp"`
+	System     string `json:"systm"`
+	Domain     string `json:"dmn"`
+	Component  string `json:"cmpnnt"`
+	Function   string `json:"nm"`
+	Operation  string `json:"oprtn"`
+	Hostname   string `json:"hstnm"`
+	IsError    bool   `json:"isErr"`
+	StatusCode string `json:"sCd"`
+	NativeCode string `json:"nCd"`
 }
 
-func NewEvent(in any) *Event {
-	switch v := in.(type) {
-	case map[string]any:
-		namespace, ok_namespace := v["namespace"].(string)
-
-		if !ok_namespace {
-			logrus.Errorf("NewEvent missing field from in map filter - status: namespace(%t)", ok_namespace)
-			return nil
-		}
-
-		timeStr, ok_time := v["time"].(string)
-		if !ok_time {
-			logrus.Errorf("NewEvent missing field from in map filter - status: time(%t)", ok_time)
-			return nil
-		}
-
-		eventTime, err := time.Parse(time.RFC3339, timeStr)
-		if err != nil {
-			logrus.Errorf("error parsing %s", timeStr)
-			return nil
-		}
-
-		metrics, ok_metrics := v["metrics"]
-		if !ok_metrics {
-			logrus.Errorf("NewEvent missing field from in map filter - status: metrics(%t)", ok_metrics)
-			return nil
-		}
-
-		return &Event{
-			namespace: namespace,
-			time:      eventTime,
-			metrics:   metrics,
-		}
-	default:
-		logrus.Errorf("NewEvent filter did not return a map: %+v", in)
+func NewEvent(msg []byte) *Event {
+	var event Event
+	if err := json.Unmarshal(msg, &event); err != nil {
+		logrus.Errorf("msg is not json: %+v", err)
 		return nil
 	}
+
+	parsedTime, err := time.Parse(time.RFC3339, event.TimeStr)
+	if err != nil {
+		logrus.Errorf("time is not RFC3339: %+v", err)
+		return nil
+	}
+	event.Time = parsedTime
+
+	return &event
 }

@@ -11,20 +11,6 @@ import (
 var (
 	Reg *prometheus.Registry = prometheus.NewRegistry()
 
-	groupsGauge = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "groups",
-			Help: "The total number of groups",
-		},
-	)
-
-	namespacesGauge = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "namespaces",
-			Help: "The total number of namespaces",
-		},
-	)
-
 	processedMsg = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "processed_messages",
@@ -32,18 +18,11 @@ var (
 		},
 	)
 
-	filteredMsg = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "filtered_messages",
-			Help: "The number of metrics generated per namespace",
-		}, []string{"namespace"},
-	)
-
-	discardedMsg = prometheus.NewCounterVec(
+	discardedMsg = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "discarded_messages",
 			Help: "The number of metrics discarded per namespace",
-		}, []string{"namespace"},
+		},
 	)
 
 	filterTime = prometheus.NewSummary(
@@ -71,24 +50,12 @@ var (
 	)
 )
 
-func IncNumberGroups() {
-	groupsGauge.Inc()
-}
-
-func SetNumberNamespaces(n int) {
-	namespacesGauge.Set(float64(n))
-}
-
 func IncProcessedMsg() {
 	processedMsg.Inc()
 }
 
-func IncNamespaceFilteredMsg(namespace string) {
-	filteredMsg.With(prometheus.Labels{"namespace": namespace}).Inc()
-}
-
-func IncNamespaceDiscardedMsg(namespace string) {
-	discardedMsg.With(prometheus.Labels{"namespace": namespace}).Inc()
+func IncDiscardedMsg() {
+	discardedMsg.Inc()
 }
 
 var (
@@ -116,10 +83,7 @@ func initBasePromMetricsHandlers(activateObserveProcessingTime bool) {
 }
 
 func registerBasePromMetrics(activateObserveProcessingTime bool) {
-	Reg.MustRegister(groupsGauge)
-	Reg.MustRegister(namespacesGauge)
 	Reg.MustRegister(processedMsg)
-	Reg.MustRegister(filteredMsg)
 	Reg.MustRegister(discardedMsg)
 
 	if activateObserveProcessingTime {

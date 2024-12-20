@@ -17,12 +17,20 @@ def callback(res, mes_id):
     pass
 
 
-def create_msg(code: str, domain: str, start_time: datetime.datetime, hostname: str) -> bytes:
+def create_msg() -> bytes:
     msg = {
-        "code": code,
-        "domain": domain,
-        "strtTm": start_time.isoformat(),
-        "hstnm": hostname
+        "strtTm": datetime.datetime.now().isoformat(),
+        "drtn": random.randint(5, 25),
+        "tp": random.choice(tps),
+        "systm": random.choice(systems),
+        "dmn": random.choice(domains),
+        "cmpnnt": random.choice(components),
+        "hstnm": random.choice(hostnames),
+        "nm": random.choice(nms),
+        "oprtn": random.choice(oprtns),
+        "isErr": random.choice([True] + [False]*4),
+        "sCd": random.choice(scds),
+        "nCd": random.choice(ncds),
     }
     msg = json.dumps(msg)
     return msg.encode('utf-8')
@@ -31,7 +39,7 @@ def create_msg(code: str, domain: str, start_time: datetime.datetime, hostname: 
 def produce() -> Generator[bytes, Any, Any]:
     n_messages = 0
     while n_messages < MAX_MESSAGES:
-        yield create_msg(random.choice(statuses), random.choice(domains), datetime.datetime.now(datetime.timezone.utc), random.choice(hostnames))
+        yield create_msg()
         n_messages += 1
 
 
@@ -65,13 +73,31 @@ def main() -> None:
 
 
 if __name__=="__main__":
-    n_domains: int = 15
-    domains: list[str] = [f"GROUP{i}" for i in range(n_domains)]
+    n_tps: int = 3
+    tps: list[str] = [f"TP{i}" for i in range(n_tps)]
 
-    n_statuses: int = 10
-    statuses: list[str] = [f"STATUS{i}" for i in range(n_statuses)]
+    n_systems: int = 3
+    systems: list[str] = [f"SYSTEM{i}" for i in range(n_systems)]
+
+    n_domains: int = 10
+    domains: list[str] = [f"DOMAIN{i}" for i in range(n_domains)]
+
+    n_components: int = 50
+    components: list[str] = [f"COMPONENT{i}" for i in range(n_components)]
 
     n_hostnames: int = 4
     hostnames: list[str] = [f"HOST{i}" for i in range(n_hostnames)]
+
+    n_nms: int = 5
+    nms: list[str] = [f"NM{i}" for i in range(n_nms)]
+
+    n_oprtns: int = 5
+    oprtns: list[str] = [f"OPRTN{i}" for i in range(n_oprtns)]
+
+    n_scds: int = 4
+    scds: list[str] = [f"SCD{i}" for i in range(n_scds)]
+
+    n_ncds: int = 4
+    ncds: list[str] = [f"NCD{i}" for i in range(n_ncds)]
 
     main()

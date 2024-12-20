@@ -13,6 +13,7 @@ import (
 
 	"example.com/streaming-metrics/src/flow"
 	"example.com/streaming-metrics/src/prom"
+	"example.com/streaming-metrics/src/store"
 )
 
 func setupLogging(level string) {
@@ -91,6 +92,11 @@ func main() {
 	setupLogging(opt.logLevel)
 	logrus.Infof("%+v", opt)
 
+	flow.DelayLabel = fmt.Sprintf("%ds", opt.Cardinality*opt.Granularity)
+	store.Granularity = opt.Granularity
+	store.Cardinality = opt.Cardinality
+	store.Shift = opt.Shift
+
 	prom.SetupPrometheus(opt.activateObserveProcessingTime)
 	setupReadiness()
 	go startHttp(opt.httpPort)
@@ -120,20 +126,12 @@ func main() {
 
 	defer consumer.Close()
 
-	logrus.Infoln("loading namespaces")
-	namespaces := loadNamespaces(opt.namespacesDir, opt.Granularity, opt.Cardinality, opt.Shift)
-	logrus.Infoln("loading filters")
-	filterRoot := loadFilters(opt.filtersDir, opt.groupsDir, namespaces)
-
-	prom.SetNumberNamespaces(len(namespaces))
-	flow.DelayLabel = fmt.Sprintf("%ds", opt.Cardinality*opt.Granularity)
-
 	// Logic
-	go flow.Ticker(opt.Granularity, namespaces)
+	go flow.Ticker(opt.Granularity)
 
 	logrus.Infoln("starting consumer threads")
 	for i := 0; i < int(opt.consumerThreads); i++ {
-		go flow.Consumer(consumeChan, ackChan, namespaces, filterRoot)
+		go flow.Consumer(consumeChan, ackChan)
 	}
 
 	if opt.pprofOn {
