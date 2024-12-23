@@ -173,11 +173,10 @@ func (metric *Metric) UpdateWindows(t time.Time, labels map[string]string, value
 	if _, exists := metric.windows[key]; !exists {
 		metric.windows[key] = newWindow(labels, metric.Type)
 	}
+	window := metric.windows[key]
 	metric.mutex.Unlock()
 
-	metric.windows[key].mutex.Lock()
-	defer metric.windows[key].mutex.Unlock()
-	metric.windows[key].update(t, value)
+	window.Update(t, value)
 }
 
 func (metric *Metric) Tick() {
