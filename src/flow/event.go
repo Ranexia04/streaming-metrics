@@ -9,8 +9,8 @@ import (
 
 type Event struct {
 	Time     time.Time
-	TimeStr  string `json:"strtTm"`
-	Duration int64  `json:"drtn"`
+	TimeStr  string  `json:"strtTm"`
+	Duration float64 `json:"drtn"`
 
 	Type       string `json:"tp"`
 	System     string `json:"systm"`
@@ -37,6 +37,5 @@ func NewEvent(msg []byte) *Event {
 		return nil
 	}
 	event.Time = parsedTime
-
 	return &event
 }

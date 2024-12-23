@@ -48,7 +48,6 @@ func processMsg(msg pulsar.ConsumerMessage, ackChan chan<- pulsar.ConsumerMessag
 	consumeStart := time.Now()
 
 	event := NewEvent(msg.Payload())
-
 	if event == nil {
 		return
 	}

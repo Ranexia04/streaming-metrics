@@ -34,8 +34,7 @@ func newWindow(labels map[string]string, metricType string) *Window {
 	return window
 }
 
-func (window *Window) Update(t time.Time, value any) {
-	window.mutex.Lock()
+func (window *Window) update(t time.Time, value any) {
 	index, err := window.getBucketIndex(t)
 
 	if err != nil {
@@ -45,7 +44,6 @@ func (window *Window) Update(t time.Time, value any) {
 	}
 
 	bucket := window.buckets[index]
-	window.mutex.Unlock()
 
 	bucket.Update(value)
 }

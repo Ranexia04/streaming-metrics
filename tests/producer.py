@@ -19,8 +19,8 @@ def callback(res, mes_id):
 
 def create_msg() -> bytes:
     msg = {
-        "strtTm": datetime.datetime.now().isoformat(),
-        "drtn": random.randint(5, 25),
+        "strtTm": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "drtn": random.random()*25,
         "tp": random.choice(tps),
         "systm": random.choice(systems),
         "dmn": random.choice(domains),
