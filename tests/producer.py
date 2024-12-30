@@ -79,25 +79,25 @@ if __name__=="__main__":
     n_systems: int = 3
     systems: list[str] = [f"SYSTEM{i}" for i in range(n_systems)]
 
-    n_domains: int = 10
+    n_domains: int = 5
     domains: list[str] = [f"DOMAIN{i}" for i in range(n_domains)]
 
-    n_components: int = 50
+    n_components: int = 10
     components: list[str] = [f"COMPONENT{i}" for i in range(n_components)]
 
     n_hostnames: int = 4
     hostnames: list[str] = [f"HOST{i}" for i in range(n_hostnames)]
 
-    n_nms: int = 5
+    n_nms: int = 3
     nms: list[str] = [f"NM{i}" for i in range(n_nms)]
 
-    n_oprtns: int = 5
+    n_oprtns: int = 3
     oprtns: list[str] = [f"OPRTN{i}" for i in range(n_oprtns)]
 
-    n_scds: int = 4
+    n_scds: int = 2
     scds: list[str] = [f"SCD{i}" for i in range(n_scds)]
 
-    n_ncds: int = 4
+    n_ncds: int = 2
     ncds: list[str] = [f"NCD{i}" for i in range(n_ncds)]
 
     main()

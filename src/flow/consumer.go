@@ -16,7 +16,7 @@ var DelayLabel string
 var (
 	labelNames      = []string{"delay", "tp", "systm", "dmn", "cmpnnt", "nm", "oprtn", "hstnm", "isErr", "sCd", "nCd"}
 	requestCount    = store.NewMetric("request_count", "Counter of request received", "counter", labelNames)
-	requestDuration = store.NewMetric("request_duration", "Duration of requests received in seconds", "histogram", labelNames)
+	requestDuration = store.NewMetric("request_duration", "Duration of requests received in seconds", "summary", labelNames)
 )
 
 func Consumer(consumeChan <-chan pulsar.ConsumerMessage, ackChan chan<- pulsar.ConsumerMessage) {
